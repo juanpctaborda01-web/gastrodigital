@@ -1,0 +1,15 @@
+# Bloquear ejecución de PHP en la carpeta de uploads
+# Evita que un archivo subido malicioso se ejecute como script
+<FilesMatch "\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Solo permitir imágenes
+<FilesMatch "\.(jpg|jpeg|png|webp|gif)$">
+    Order deny,allow
+    Allow from all
+</FilesMatch>
+
+Options -Indexes -ExecCGI
+AddHandler cgi-script .php .pl .py .jsp .asp .sh .cgi

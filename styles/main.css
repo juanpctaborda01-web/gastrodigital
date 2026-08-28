@@ -1,0 +1,1222 @@
+/* =============================================
+   GastroDigital — Estilos Globales  v2.2
+   Paleta: terracota · crema · verde olivo · mostaza
+   ============================================= */
+
+/* ── Variables de diseño ── */
+:root {
+    /* Colores principales — cálidos y apetitosos */
+    --primary:       #c0392b;   /* rojo terracota */
+    --primary-dark:  #962d22;   /* terracota oscuro (hover) */
+    --primary-light: #e74c3c;   /* rojo más vivo */
+    --secondary:     #e8a838;   /* mostaza/dorado */
+    --accent:        #6b8f3e;   /* verde hierbas */
+
+    /* Fondos — crema cálida */
+    --dark:          #3b2a1a;   /* marrón oscuro (navbar/footer) */
+    --dark-2:        #2c1f0f;   /* marrón más profundo */
+    --surface:       #ffffff;
+    --surface-2:     #fdf8f2;   /* crema suave */
+    --surface-3:     #f5ede0;   /* crema más intensa */
+
+    /* Tipografía y bordes */
+    --text:          #2d1f0e;   /* marrón texto */
+    --text-muted:    #8a7060;   /* marrón suave */
+    --border:        #e8d9c8;   /* borde crema */
+
+    /* Semánticos */
+    --success:       #5a9a3a;
+    --danger:        #c0392b;
+
+    /* Utilidades */
+    --radius:        12px;
+    --radius-lg:     20px;
+    --shadow:        0 4px 20px rgba(60,30,10,.08);
+    --shadow-lg:     0 8px 40px rgba(60,30,10,.14);
+    --transition:    .25s ease;
+}
+
+/* ── Reset base ── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--surface-2);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main { flex: 1; }
+
+a { color: var(--primary); text-decoration: none; transition: color var(--transition); }
+a:hover { color: var(--primary-dark); }
+
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.fw-800 { font-weight: 800; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-3); }
+::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 3px; }
+
+/* =============================================
+   Sidebar / Navegación lateral
+   ============================================= */
+body.app-layout {
+    padding-left: 280px;
+    transition: padding-left .25s ease;
+}
+
+body.auth-page {
+    padding-left: 0;
+}
+
+body.app-layout main,
+body.app-layout .container,
+body.app-layout .container-fluid {
+    position: relative;
+    z-index: 1;
+}
+
+.sidebar-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1040;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    box-shadow: var(--shadow);
+}
+
+.app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 1rem 1rem;
+    background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 100%);
+    color: #fff;
+    box-shadow: 18px 0 40px rgba(20, 10, 4, .22);
+    z-index: 1050;
+    transform: translateX(0);
+    transition: transform .25s ease;
+    border-right: 1px solid rgba(255,255,255,.12);
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    color: #fff;
+    text-decoration: none;
+}
+
+.sidebar-brand img {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    border-radius: 14px;
+    background: rgba(255,255,255,.12);
+    padding: .35rem;
+}
+
+.sidebar-brand span {
+    display: block;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.sidebar-brand small {
+    display: block;
+    color: rgba(255,255,255,.65);
+    font-size: .77rem;
+}
+
+.sidebar-close,
+.sidebar-toggle {
+    cursor: pointer;
+}
+
+.sidebar-close {
+    border: none;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    flex: 1;
+}
+
+.nav-section-title {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.55);
+    margin: .15rem 0 .4rem;
+}
+
+.app-sidebar .nav-link {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    color: rgba(255,255,255,.86);
+    padding: .8rem .95rem;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all var(--transition);
+    border: 1px solid transparent;
+    background: transparent;
+}
+
+.app-sidebar .nav-link:hover,
+.app-sidebar .nav-link.active {
+    background: linear-gradient(90deg, rgba(232,168,56,.22), rgba(255,255,255,.10));
+    color: #fff;
+    border-color: rgba(232,168,56,.35);
+    transform: translateX(2px);
+}
+
+.app-sidebar .nav-link i {
+    width: 18px;
+    text-align: center;
+}
+
+.app-sidebar .nav-link-btn {
+    width: 100%;
+    text-align: left;
+}
+
+.sidebar-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,.14);
+}
+
+.auth-sidebar-actions {
+    width: min(100%, 248px);
+    margin: 0 auto;
+}
+
+.auth-sidebar-footer {
+    position: absolute;
+    right: 1rem;
+    top: 58%;
+    left: 1rem;
+    margin: 0;
+    transform: translateY(-50%);
+}
+
+.user-card {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    padding: .8rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,.08);
+}
+
+.user-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary), var(--primary));
+    color: #fff;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.user-name {
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.user-email {
+    color: rgba(255,255,255,.7);
+    font-size: .8rem;
+    margin-top: .1rem;
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 6, 2, .45);
+    backdrop-filter: blur(3px);
+    z-index: 1040;
+    display: none;
+}
+
+body.sidebar-open .sidebar-backdrop {
+    display: block;
+}
+
+body.sidebar-open .app-sidebar {
+    transform: translateX(0);
+}
+
+@media (max-width: 991px) {
+    body.app-layout {
+        padding-left: 0;
+    }
+
+    .sidebar-toggle {
+        display: inline-flex;
+    }
+
+    .app-sidebar {
+        transform: translateX(-100%);
+    }
+}
+
+/* =============================================
+   Footer
+   ============================================= */
+.footer {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 100%);
+    padding: 3rem 0 0;
+    margin-top: 4rem;
+}
+
+.footer-heading {
+    color: var(--secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: .75rem;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+}
+
+.footer-links li { margin-bottom: .5rem; }
+
+.footer-links a,
+.footer-links span {
+    color: rgba(255,255,255,.6);
+    font-size: .9rem;
+    transition: color var(--transition);
+}
+
+.footer-links a:hover { color: var(--secondary); }
+
+.footer-social {
+    color: rgba(255,255,255,.6);
+    font-size: 1.2rem;
+    transition: color var(--transition), transform var(--transition);
+    display: inline-block;
+}
+
+.footer-social:hover { color: var(--secondary); transform: translateY(-3px); }
+
+/* =============================================
+   Tarjetas genéricas
+   ============================================= */
+.card {
+    border: none;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+
+.card-img-top {
+    border-radius: var(--radius) var(--radius) 0 0;
+    object-fit: cover;
+    height: 200px;
+}
+
+/* =============================================
+   Botones
+   ============================================= */
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    font-weight: 700;
+    border-radius: 10px;
+    padding: .55rem 1.4rem;
+    transition: all var(--transition);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(192,57,43,.35);
+}
+
+.btn-outline-primary {
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 700;
+    border-radius: 10px;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+/* =============================================
+   Formularios
+   ============================================= */
+.form-control, .form-select {
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    padding: .65rem 1rem;
+    font-size: .95rem;
+    background: var(--surface);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(192,57,43,.15);
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: .9rem;
+    color: var(--text);
+    margin-bottom: .4rem;
+}
+
+/* =============================================
+   Auth (login / register)
+   ============================================= */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* fondo con textura tipo madera/especias */
+    background: linear-gradient(135deg, var(--dark) 0%, #5c3317 50%, var(--dark-2) 100%);
+    padding: 2rem 1rem;
+}
+
+.auth-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 440px;
+}
+
+.auth-logo  { font-size: 2.5rem; color: var(--primary); }
+.auth-title { font-size: 1.6rem; font-weight: 800; color: var(--dark); }
+.auth-subtitle { color: var(--text-muted); font-size: .9rem; }
+
+/* Separador "o" en el form */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: .85rem;
+    margin: 1.2rem 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* =============================================
+   Alertas
+   ============================================= */
+.alert {
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: .9rem;
+}
+
+.alert-danger  { background: #fdecea; color: #962d22; }
+.alert-success { background: #edf7e6; color: #3d6b1f; }
+.alert-warning { background: #fdf5e0; color: #7a5a00; }
+.alert-info    { background: #e8f4f8; color: #1a5276; }
+
+/* =============================================
+   Badges de rol
+   ============================================= */
+.badge-rol {
+    font-size: .75rem;
+    padding: .3rem .7rem;
+    border-radius: 20px;
+    font-weight: 700;
+}
+
+.badge-admin   { background: #fdecea; color: var(--primary); }
+.badge-chef    { background: #fdf5e0; color: #7a5a00; }
+.badge-usuario { background: #edf7e6; color: #3d6b1f; }
+
+/* =============================================
+   Dashboard — tarjetas de estadísticas
+   ============================================= */
+.dashboard-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.dashboard-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 18px 45px rgba(59, 42, 26, .16);
+    background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 100%);
+}
+
+.dashboard-hero::before {
+    content: '';
+    position: absolute;
+    inset: auto -40px -40px auto;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,168,56,.22), transparent 70%);
+}
+
+.dashboard-hero .hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.panel-card {
+    border: 0;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 28px rgba(59, 42, 26, .08);
+    background: var(--surface);
+}
+
+.panel-card .card-body {
+    padding: 1.2rem 1.25rem;
+}
+
+.action-pill {
+    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.13);
+    color: #fff;
+    backdrop-filter: blur(8px);
+}
+
+.action-pill:hover {
+    color: #fff;
+    background: rgba(255,255,255,.2);
+    transform: translateY(-1px);
+}
+
+.stat-card {
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(59, 42, 26, .12);
+}
+
+/* Círculo decorativo de fondo */
+.stat-card::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.1);
+}
+
+.stat-card .stat-icon   { font-size: 2.5rem; opacity: .85; }
+.stat-card .stat-number { font-size: 2rem; font-weight: 800; line-height: 1; }
+.stat-card .stat-label  { font-size: .85rem; opacity: .85; font-weight: 600; }
+
+/* =============================================
+   Receta card
+   ============================================= */
+.receta-card .card-img-top {
+    height: 220px;
+    transition: transform .4s ease;
+}
+
+.receta-card:hover .card-img-top { transform: scale(1.04); }
+.receta-card { overflow: hidden; }
+
+/* Badge de categoría sobre la imagen */
+.receta-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--primary);
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .25rem .65rem;
+    border-radius: 20px;
+}
+
+/* Placeholder cuando no hay imagen */
+.receta-img-wrap { position: relative; }
+
+.receta-img-placeholder {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-3);
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.receta-img-placeholder i { font-size: 4.5rem; opacity: .4; color: var(--primary); }
+
+/* =============================================
+   Tabla admin
+   ============================================= */
+.table-custom {
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.table-custom thead {
+    background: linear-gradient(135deg, var(--dark), var(--dark-2));
+    color: #fff;
+}
+
+.table-custom thead th {
+    font-weight: 700;
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border: none;
+    padding: 1rem 1.2rem;
+}
+
+.table-custom tbody tr { transition: background var(--transition); }
+.table-custom tbody tr:hover { background: rgba(192,57,43,.05); }
+
+/* =============================================
+   Estado vacío
+   ============================================= */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    opacity: .3;
+    color: var(--secondary);
+    display: block;
+    margin-bottom: 1rem;
+}
+
+/* =============================================
+   Responsive
+   ============================================= */
+@media (max-width: 768px) {
+    .auth-card { padding: 1.8rem 1.4rem; }
+    .stat-card { margin-bottom: .5rem; }
+}
+
+/* =============================================
+   Landing — Hero
+   ============================================= */
+.hero-section {
+    position: relative;
+    /* imagen de fondo centrada y cubriendo toda la sección */
+    background-image: url('../img/GastorDigitalFondo.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    padding: 5rem 0 6rem;
+    overflow: hidden;
+}
+
+/* Overlay oscuro sobre la imagen para que el texto sea legible */
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    /* degradado semitransparente: más oscuro abajo para la ola */
+    background: linear-gradient(
+        160deg,
+        rgba(43, 20, 8, .72) 0%,
+        rgba(90, 35, 15, .65) 50%,
+        rgba(30, 12, 4, .80) 100%
+    );
+}
+
+.hero-content { position: relative; z-index: 1; }
+.min-vh-hero  { min-height: 75vh; }
+
+/* Chip etiqueta del hero */
+.hero-tag {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(232,168,56,.15);
+    color: var(--secondary);
+    border: 1px solid rgba(232,168,56,.3);
+    padding: .35rem .9rem;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+}
+
+.hero-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+}
+
+/* Palabra destacada en el título */
+.hero-highlight {
+    color: var(--secondary);
+    position: relative;
+}
+
+.hero-highlight::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--secondary);
+    border-radius: 2px;
+    opacity: .4;
+}
+
+.hero-subtitle {
+    color: rgba(255,255,255,.7);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    max-width: 480px;
+}
+
+/* Botón primario del hero */
+.btn-hero-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    border: none;
+    font-weight: 700;
+    padding: .75rem 1.8rem;
+    border-radius: 12px;
+    font-size: .95rem;
+    transition: all var(--transition);
+    box-shadow: 0 4px 20px rgba(192,57,43,.4);
+}
+
+.btn-hero-primary:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(192,57,43,.5);
+}
+
+/* Botón outline del hero */
+.btn-hero-outline {
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,.3);
+    font-weight: 700;
+    padding: .75rem 1.8rem;
+    border-radius: 12px;
+    font-size: .95rem;
+    transition: all var(--transition);
+    backdrop-filter: blur(4px);
+}
+
+.btn-hero-outline:hover {
+    background: rgba(255,255,255,.15);
+    color: #fff;
+    border-color: rgba(255,255,255,.5);
+    transform: translateY(-2px);
+}
+
+/* Estadísticas del hero */
+.hero-stats       { display: flex; align-items: center; gap: 1.5rem; }
+.hero-stat        { text-align: center; }
+.hero-stat-num    { display: block; font-size: 1.6rem; font-weight: 800; color: var(--secondary); line-height: 1; }
+.hero-stat-label  { font-size: .78rem; color: rgba(255,255,255,.55); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.hero-stat-divider { width: 1px; height: 36px; background: rgba(255,255,255,.15); }
+
+/* Tarjetas flotantes animadas del hero */
+.hero-cards-stack { position: relative; width: 380px; height: 380px; }
+
+.hero-circle-bg {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: rgba(232,168,56,.07);
+    border: 1px solid rgba(232,168,56,.15);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.hero-float-card {
+    position: absolute;
+    background: rgba(255,255,255,.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 16px;
+    padding: 1rem 1.3rem;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+
+.hero-float-card i     { font-size: 1.6rem; color: var(--secondary); }
+.hero-float-card span  { font-weight: 700; font-size: .9rem; }
+.hero-float-card small { color: rgba(255,255,255,.6); font-size: .75rem; }
+
+/* Posición y animación de cada tarjeta */
+.hero-float-card.card-1 { top: 30px;   left: 20px;  animation: float1 4s   ease-in-out infinite; }
+.hero-float-card.card-2 { top: 130px;  right: 10px; animation: float2 4.5s ease-in-out infinite; }
+.hero-float-card.card-3 { bottom: 40px; left: 60px; animation: float3 5s   ease-in-out infinite; }
+
+@keyframes float1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+@keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)}  }
+@keyframes float3 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+
+/* Ola de transición al final del hero */
+.hero-wave             { position: absolute; bottom: -1px; left: 0; right: 0; line-height: 0; }
+.hero-wave svg         { width: 100%; height: 80px; display: block; }
+
+/* =============================================
+   Secciones generales
+   ============================================= */
+.section-tag {
+    display: inline-block;
+    color: var(--primary);
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: .4rem;
+}
+
+.section-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: .5rem;
+}
+
+.section-subtitle {
+    color: var(--text-muted);
+    font-size: .95rem;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* =============================================
+   Chips de categoría
+   ============================================= */
+.categoria-chip {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .65rem 1.2rem;
+    border-radius: 50px;
+    background: var(--chip-bg, #f7ede0);    /* crema por defecto */
+    color: var(--chip-color, var(--primary));
+    font-weight: 700;
+    font-size: .875rem;
+    border: 1.5px solid transparent;
+    transition: all var(--transition);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.categoria-chip i { font-size: 1.1rem; }
+
+.categoria-chip:hover {
+    background: var(--chip-color, var(--primary));
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
+
+/* =============================================
+   Cómo funciona
+   ============================================= */
+.como-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    box-shadow: var(--shadow);
+    position: relative;
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.como-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+
+/* Número de paso */
+.como-num {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 800;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: .5px;
+}
+
+/* Ícono del paso */
+.como-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--surface-3), #eed5b0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 1.6rem;
+    color: var(--primary);
+}
+
+/* =============================================
+   CTA final
+   ============================================= */
+.cta-section {
+    position: relative;
+    /* misma imagen que el hero para consistencia visual */
+    background-image: url('../img/GastorDigitalFondo.png');
+    background-size: cover;
+    background-position: center 60%;
+    background-repeat: no-repeat;
+    background-attachment: fixed; /* efecto parallax suave */
+    padding: 5rem 0;
+    text-align: center;
+}
+
+/* Overlay igual al hero */
+.cta-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        160deg,
+        rgba(43, 20, 8, .78) 0%,
+        rgba(90, 35, 15, .70) 50%,
+        rgba(30, 12, 4, .82) 100%
+    );
+}
+
+/* Asegura que el contenido quede por encima del overlay */
+.cta-section .container { position: relative; z-index: 1; }
+
+.cta-icon     { font-size: 3rem; color: var(--secondary); display: block; margin-bottom: 1rem; }
+.cta-title    { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; color: #fff; margin-bottom: .75rem; }
+.cta-subtitle { color: rgba(255,255,255,.65); font-size: 1rem; margin-bottom: 0; }
+
+/* =============================================
+   Paginación
+   ============================================= */
+.pagination .page-link {
+    color: var(--primary);
+    border-color: var(--border);
+    background: var(--surface);
+    transition: all var(--transition);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.pagination .page-link:hover {
+    background: var(--surface-3);
+    color: var(--primary-dark);
+}
+
+/* =============================================
+   Chips de categoría en landing — scroll horizontal móvil
+   ============================================= */
+.categorias-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    justify-content: center;
+}
+
+@media (max-width: 576px) {
+    .categorias-scroll {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: .5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    .categorias-scroll::-webkit-scrollbar { height: 4px; }
+    .categorias-scroll::-webkit-scrollbar-thumb {
+        background: var(--secondary);
+        border-radius: 2px;
+    }
+}
+
+/* =============================================
+   Ajuste de colores de roles y badges por rol
+   ============================================= */
+.badge-admin   { background: #fdecea; color: var(--primary);  }
+.badge-chef    { background: #fef9e7; color: #7d6608;         }
+.badge-usuario { background: #eafaf1; color: #1e8449;         }
+
+/* =============================================
+   Card hover suave para accesos rápidos
+   ============================================= */
+.card:hover .bi { transition: transform var(--transition); }
+.card:hover .bi { transform: scale(1.08); }
+
+/* =============================================
+   MODO OSCURO
+   Se activa añadiendo data-theme="dark" al <html>
+   ============================================= */
+[data-theme="dark"] {
+    /* Re-mapeamos todas las variables de color */
+    --primary:       #e05b4b;
+    --primary-dark:  #b84030;
+    --primary-light: #ff7060;
+    --secondary:     #f0b84a;
+    --accent:        #82aa50;
+
+    --dark:          #111111;
+    --dark-2:        #000000;
+    --surface:       #171717;
+    --surface-2:     #202020;
+    --surface-3:     #2a2a2a;
+
+    --text:          #e8e0d8;
+    --text-muted:    #b5b5b5;
+    --border:        #414141;
+
+    --shadow:        0 4px 20px rgba(0,0,0,.35);
+    --shadow-lg:     0 8px 40px rgba(0,0,0,.5);
+}
+
+/* Body y fondo general */
+[data-theme="dark"] body {
+    background-color: var(--surface-2);
+    color: var(--text);
+}
+
+/* Cards */
+[data-theme="dark"] .card {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+[data-theme="dark"] .table {
+    color: var(--text);
+    border-color: var(--border);
+}
+[data-theme="dark"] .table-light,
+[data-theme="dark"] .table thead {
+    background: var(--surface-3) !important;
+    color: var(--text);
+}
+[data-theme="dark"] .table-hover tbody tr:hover {
+    background-color: rgba(255,255,255,.04);
+}
+[data-theme="dark"] .table td,
+[data-theme="dark"] .table th {
+    border-color: var(--border);
+}
+
+/* Formularios */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background: var(--surface-3);
+    border-color: var(--border);
+    color: var(--text);
+}
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background: var(--surface-3);
+    color: var(--text);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(224,91,75,.2);
+}
+[data-theme="dark"] .form-control::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .input-group-text {
+    background: var(--surface-3);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+
+/* Dropdown del navbar */
+[data-theme="dark"] .dropdown-menu {
+    background: var(--surface);
+    border-color: var(--border);
+}
+[data-theme="dark"] .dropdown-item {
+    color: var(--text);
+}
+[data-theme="dark"] .dropdown-item:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+[data-theme="dark"] .dropdown-divider { border-color: var(--border); }
+
+/* Modal */
+[data-theme="dark"] .modal-content {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+    border-color: var(--border);
+}
+
+/* Alertas */
+[data-theme="dark"] .alert-danger  { background: #3a1a1a; color: #ff9f9f; border-left: 3px solid var(--primary); }
+[data-theme="dark"] .alert-success { background: #1a2e1a; color: #90cc90; border-left: 3px solid var(--accent); }
+[data-theme="dark"] .alert-warning { background: #2e2a12; color: #f0c860; border-left: 3px solid var(--secondary); }
+    [data-theme="dark"] .alert-info    { background: #252525; color: #c8c8c8; border-left: 3px solid #777; }
+
+/* Badges de rol en modo oscuro */
+[data-theme="dark"] .badge-admin   { background: #3a1a3a; color: #cc88ff; }
+[data-theme="dark"] .badge-chef    { background: #2e2512; color: var(--secondary); }
+[data-theme="dark"] .badge-usuario { background: #1a2e1a; color: var(--accent); }
+
+/* Receta img placeholder */
+[data-theme="dark"] .receta-img-placeholder {
+    filter: brightness(.75);
+}
+
+/* Auth card */
+[data-theme="dark"] .auth-card {
+    background: var(--surface);
+    color: var(--text);
+}
+[data-theme="dark"] .auth-title   { color: var(--text); }
+[data-theme="dark"] .auth-subtitle{ color: var(--text-muted); }
+[data-theme="dark"] .auth-divider::before,
+[data-theme="dark"] .auth-divider::after { background: var(--border); }
+
+/* Paginación */
+[data-theme="dark"] .pagination .page-link {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--primary);
+}
+[data-theme="dark"] .pagination .page-link:hover {
+    background: var(--surface-3);
+}
+[data-theme="dark"] .pagination .page-item.active .page-link {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+/* Table-custom header */
+[data-theme="dark"] .table-custom thead {
+    background: linear-gradient(135deg, #171717, #050505);
+}
+
+/* bg-light override en modo oscuro */
+[data-theme="dark"] .bg-light { background-color: var(--surface-3) !important; }
+[data-theme="dark"] .border-bottom { border-color: var(--border) !important; }
+
+/* Textos muted */
+[data-theme="dark"] .text-muted { color: var(--text-muted) !important; }
+[data-theme="dark"] .text-dark  { color: var(--text)       !important; }
+
+/* Hero y CTA mantienen su imagen de fondo — solo ajustamos el overlay */
+[data-theme="dark"] .hero-overlay {
+    background: linear-gradient(
+        160deg,
+        rgba(10, 5, 2, .82) 0%,
+        rgba(30, 10, 5, .75) 50%,
+        rgba(5, 3, 1, .88) 100%
+    );
+}
+
+/* Toggle de modo oscuro en navbar */
+.dark-toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.2);
+    border: 1.5px solid rgba(255,255,255,.3);
+    position: relative;
+    cursor: pointer;
+    transition: background var(--transition);
+    flex-shrink: 0;
+}
+.dark-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform var(--transition), background var(--transition);
+}
+[data-theme="dark"] .dark-toggle {
+    background: var(--secondary);
+    border-color: var(--secondary);
+}
+[data-theme="dark"] .dark-toggle::after {
+    transform: translateX(16px);
+    background: var(--dark-2);
+}
+
+/* Icono del toggle */
+.dark-toggle-icon { font-size: .95rem; color: rgba(255,255,255,.8); transition: color var(--transition); }
+[data-theme="dark"] .dark-toggle-icon { color: var(--secondary); }

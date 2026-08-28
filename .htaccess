@@ -1,0 +1,24 @@
+Options -Indexes
+
+# Redirigir todo al index.php si el archivo no existe
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Cabeceras de seguridad
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Caché para assets estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css             "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png            "access plus 1 month"
+    ExpiresByType image/jpeg           "access plus 1 month"
+    ExpiresByType image/webp           "access plus 1 month"
+</IfModule>
