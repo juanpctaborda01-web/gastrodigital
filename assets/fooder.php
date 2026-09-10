@@ -9,7 +9,7 @@ $anio    = date('Y');
             <!-- Marca -->
             <div class="col-lg-4 col-md-6">
                 <a href="<?= $baseUrl ?>" class="d-inline-block mb-3">
-                    <img src="<?= $baseUrl ?>/img/logoGastroDigital.jpeg" alt="GastroDigital" height="70">
+                    <img src="<?= $baseUrl ?>/img/GastroDigitalLogo2.png" alt="GastroDigital" height="70">
                 </a>
                 <p class="text-white-50 small">
                     Descubre, crea y comparte recetas increíbles con una comunidad apasionada por la cocina.
@@ -26,7 +26,7 @@ $anio    = date('Y');
             <div class="col-lg-2 col-md-6 col-6">
                 <h6 class="footer-heading">Explorar</h6>
                 <ul class="list-unstyled footer-links">
-                    <li><a href="<?= $baseUrl ?>/index.php?route=recetas">Recetas</a></li>
+                    <li><a href="<?= $baseUrl ?>/recetas">Recetas</a></li>
                     <li><a href="<?= $baseUrl ?>/admin/categorias">Categorías</a></li>
                 </ul>
             </div>
@@ -45,10 +45,10 @@ $anio    = date('Y');
                         };
                         ?>
                         <li><a href="<?= $dashLink ?>">Mi panel</a></li>
-                        <li><a href="<?= $baseUrl ?>/index.php?route=logout">Cerrar sesión</a></li>
+                        <li><a href="<?= $baseUrl ?>/logout">Cerrar sesión</a></li>
                     <?php else: ?>
-                        <li><a href="<?= $baseUrl ?>/index.php?route=login">Iniciar sesión</a></li>
-                        <li><a href="<?= $baseUrl ?>/index.php?route=register">Registrarse</a></li>
+                        <li><a href="<?= $baseUrl ?>/login">Iniciar sesión</a></li>
+                        <li><a href="<?= $baseUrl ?>/register">Registrarse</a></li>
                     <?php endif; ?>
                 </ul>
             </div>

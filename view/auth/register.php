@@ -10,7 +10,7 @@ if (isLoggedIn()) {
 }
 
 $pageTitle = 'Crear Cuenta';
-$error = $_SESSION['error'] ?? null;
+$error     = $_SESSION['error'] ?? null;
 unset($_SESSION['error']);
 ?>
 <!DOCTYPE html>
@@ -18,45 +18,41 @@ unset($_SESSION['error']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?> | GastroDigital</title>
+    <title><?= htmlspecialchars($pageTitle) ?> | GastroDigital</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/styles/main.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/styles/main.css?v=<?= filemtime(__DIR__ . '/../../styles/main.css') ?>">
 </head>
-<body>
+<body class="auth-page">
 
 <div class="auth-wrapper">
     <div class="auth-card" style="max-width:480px">
 
         <!-- Logo -->
         <div class="text-center mb-4">
-            <div class="auth-logo mb-2">
-                <img src="<?= BASE_URL ?>/img/logoGastroDigital.jpeg" alt="GastroDigital" height="80">
-            </div>
+            <img src="<?= BASE_URL ?>/img/GastroDigitalLogo2.png" alt="GastroDigital" height="72" class="mb-3">
             <h1 class="auth-title">Crea tu cuenta</h1>
             <p class="auth-subtitle">Únete a la comunidad de cocineros</p>
         </div>
 
-        <!-- Alerta de error -->
+        <!-- Error -->
         <?php if ($error): ?>
-            <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
-                <i class="bi bi-exclamation-circle-fill"></i>
-                <?= htmlspecialchars($error) ?>
+            <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+                <span><?= htmlspecialchars($error) ?></span>
             </div>
         <?php endif; ?>
 
-        <!-- Formulario — POST va al router (index.php) no al controller directo -->
-        <form action="<?= BASE_URL ?>/index.php?route=register" method="POST" novalidate id="registerForm">
+        <form action="<?= BASE_URL ?>/register" method="POST" novalidate id="registerForm">
             <?php csrfField(); ?>
 
+            <!-- Nombre -->
             <div class="mb-3">
                 <label for="nombre" class="form-label">Nombre completo</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="bi bi-person text-muted"></i>
-                    </span>
-                    <input type="text" class="form-control border-start-0 ps-0"
+                <div class="auth-input-wrap">
+                    <i class="bi bi-person auth-input-icon"></i>
+                    <input type="text" class="form-control auth-input"
                            id="nombre" name="nombre"
                            placeholder="Tu nombre"
                            value="<?= htmlspecialchars($_POST['nombre'] ?? '') ?>"
@@ -64,13 +60,12 @@ unset($_SESSION['error']);
                 </div>
             </div>
 
+            <!-- Email -->
             <div class="mb-3">
                 <label for="email" class="form-label">Correo electrónico</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="bi bi-envelope text-muted"></i>
-                    </span>
-                    <input type="email" class="form-control border-start-0 ps-0"
+                <div class="auth-input-wrap">
+                    <i class="bi bi-envelope auth-input-icon"></i>
+                    <input type="email" class="form-control auth-input"
                            id="email" name="email"
                            placeholder="tu@correo.com"
                            value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
@@ -78,19 +73,16 @@ unset($_SESSION['error']);
                 </div>
             </div>
 
+            <!-- Contraseña -->
             <div class="mb-3">
                 <label for="password" class="form-label">Contraseña</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="bi bi-lock text-muted"></i>
-                    </span>
-                    <input type="password" class="form-control border-start-0 ps-0 border-end-0"
+                <div class="auth-input-wrap">
+                    <i class="bi bi-lock auth-input-icon"></i>
+                    <input type="password" class="form-control auth-input auth-input--has-btn"
                            id="password" name="password"
                            placeholder="Mínimo 8 caracteres"
-                           required autocomplete="new-password"
-                           minlength="8">
-                    <button class="btn btn-outline-secondary border-start-0" type="button"
-                            id="togglePass" aria-label="Mostrar contraseña">
+                           required autocomplete="new-password" minlength="8">
+                    <button type="button" class="auth-eye-btn" id="togglePass" aria-label="Mostrar contraseña">
                         <i class="bi bi-eye" id="eyeIcon1"></i>
                     </button>
                 </div>
@@ -99,58 +91,55 @@ unset($_SESSION['error']);
                     <div class="progress" style="height:4px;border-radius:2px">
                         <div class="progress-bar" id="strengthProgress" role="progressbar"></div>
                     </div>
-                    <small id="strengthText" class="text-muted"></small>
+                    <small id="strengthText" class="text-muted d-block mt-1"></small>
                 </div>
             </div>
 
+            <!-- Confirmar contraseña -->
             <div class="mb-3">
                 <label for="confirmar_password" class="form-label">Confirmar contraseña</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="bi bi-lock-fill text-muted"></i>
-                    </span>
-                    <input type="password" class="form-control border-start-0 ps-0 border-end-0"
+                <div class="auth-input-wrap">
+                    <i class="bi bi-lock-fill auth-input-icon"></i>
+                    <input type="password" class="form-control auth-input auth-input--has-btn"
                            id="confirmar_password" name="confirmar_password"
                            placeholder="Repite tu contraseña"
                            required autocomplete="new-password">
-                    <button class="btn btn-outline-secondary border-start-0" type="button"
-                            id="togglePass2" aria-label="Mostrar contraseña">
+                    <button type="button" class="auth-eye-btn" id="togglePass2" aria-label="Mostrar contraseña">
                         <i class="bi bi-eye" id="eyeIcon2"></i>
                     </button>
                 </div>
-                <div id="matchMsg" class="small mt-1" style="display:none"></div>
+                <small id="matchMsg" class="d-block mt-1" style="display:none!important"></small>
             </div>
 
-            <!-- Términos y condiciones (solo en registro) -->
+            <!-- Términos -->
             <div class="mb-3">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="aceptaTerminos" required>
                     <label class="form-check-label small" for="aceptaTerminos">
                         Acepto los
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#modalTerminos" class="fw-semibold">
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#modalTerminos" class="fw-600">
                             términos y condiciones
                         </a>
                     </label>
                 </div>
             </div>
 
-            <!-- Recordar sesión -->
+            <!-- Recordarme -->
             <div class="mb-4">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="recordarme" name="recordarme" value="1">
                     <label class="form-check-label small" for="recordarme">
-                        <i class="bi bi-bookmark-check me-1 text-muted"></i>
                         Mantener mi sesión iniciada por 30 días
                     </label>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 py-2 fs-6" id="submitBtn" disabled>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-700 fs-6" id="submitBtn" disabled>
                 <i class="bi bi-person-plus me-2"></i>Crear cuenta
             </button>
         </form>
 
-        <!-- Modal Términos y Condiciones -->
+        <!-- Modal Términos -->
         <div class="modal fade" id="modalTerminos" tabindex="-1" aria-labelledby="modalTerminosLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-scrollable">
                 <div class="modal-content">
@@ -161,20 +150,16 @@ unset($_SESSION['error']);
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
                     <div class="modal-body small text-muted">
-                        <h6 class="fw-semibold text-dark">1. Uso de la plataforma</h6>
-                        <p>GastroDigital es una plataforma orientada a la gestión y difusión de recetas culinarias. Al registrarse, el usuario acepta utilizar la plataforma de forma responsable y conforme a las leyes aplicables.</p>
-
-                        <h6 class="fw-semibold text-dark">2. Datos personales</h6>
-                        <p>Los datos proporcionados durante el registro (nombre, correo electrónico y contraseña) serán utilizados exclusivamente para autenticar al usuario dentro de la plataforma. No se compartirán con terceros.</p>
-
-                        <h6 class="fw-semibold text-dark">3. Contenido publicado</h6>
-                        <p>El usuario es responsable del contenido que publique (recetas, imágenes, comentarios). Queda prohibido publicar material ofensivo, ilegal o que infrinja derechos de autor.</p>
-
-                        <h6 class="fw-semibold text-dark">4. Modificaciones</h6>
-                        <p>GastroDigital se reserva el derecho de modificar estos términos en cualquier momento. Los cambios serán notificados a través de la plataforma.</p>
-
-                        <h6 class="fw-semibold text-dark">5. Contacto</h6>
-                        <p class="mb-0">Para cualquier consulta relacionada con estos términos, puedes contactarnos a través de la plataforma.</p>
+                        <h6 class="fw-700 text-dark mb-1">1. Uso de la plataforma</h6>
+                        <p>GastroDigital es una plataforma orientada a la gestión y difusión de recetas culinarias. Al registrarse, el usuario acepta utilizarla de forma responsable y conforme a las leyes aplicables.</p>
+                        <h6 class="fw-700 text-dark mb-1">2. Datos personales</h6>
+                        <p>Los datos proporcionados (nombre, correo y contraseña) se usarán exclusivamente para autenticar al usuario. No se compartirán con terceros.</p>
+                        <h6 class="fw-700 text-dark mb-1">3. Contenido publicado</h6>
+                        <p>El usuario es responsable del contenido que publique. Queda prohibido material ofensivo, ilegal o que infrinja derechos de autor.</p>
+                        <h6 class="fw-700 text-dark mb-1">4. Modificaciones</h6>
+                        <p>GastroDigital se reserva el derecho de modificar estos términos. Los cambios serán notificados a través de la plataforma.</p>
+                        <h6 class="fw-700 text-dark mb-1">5. Contacto</h6>
+                        <p class="mb-0">Para consultas: GastroDigital73@gmail.com</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
@@ -188,92 +173,112 @@ unset($_SESSION['error']);
 
         <div class="auth-divider">o</div>
 
-        <div class="text-center">
-            <p class="mb-0 text-muted small">
-                ¿Ya tienes cuenta?
-                <a href="<?= BASE_URL ?>/index.php?route=login" class="fw-700">Inicia sesión</a>
-            </p>
-        </div>
+        <p class="text-center text-muted small mb-0">
+            ¿Ya tienes cuenta?
+            <a href="<?= BASE_URL ?>/login" class="fw-700">Inicia sesión</a>
+        </p>
 
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+(function () {
+    'use strict';
+
+    const passInput    = document.getElementById('password');
+    const confirmInput = document.getElementById('confirmar_password');
+    const checkbox     = document.getElementById('aceptaTerminos');
+    const submitBtn    = document.getElementById('submitBtn');
+    const bar          = document.getElementById('strengthBar');
+    const progress     = document.getElementById('strengthProgress');
+    const strengthText = document.getElementById('strengthText');
+    const matchMsg     = document.getElementById('matchMsg');
+
     // Toggle contraseñas
-    function togglePassword(btnId, inputId, iconId) {
+    function togglePass(btnId, inputId, iconId) {
         document.getElementById(btnId).addEventListener('click', function () {
-            const input = document.getElementById(inputId);
-            const icon  = document.getElementById(iconId);
-            input.type  = input.type === 'password' ? 'text' : 'password';
+            const inp  = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            inp.type   = inp.type === 'password' ? 'text' : 'password';
             icon.classList.toggle('bi-eye');
             icon.classList.toggle('bi-eye-slash');
         });
     }
-    togglePassword('togglePass',  'password',           'eyeIcon1');
-    togglePassword('togglePass2', 'confirmar_password', 'eyeIcon2');
+    togglePass('togglePass',  'password',           'eyeIcon1');
+    togglePass('togglePass2', 'confirmar_password', 'eyeIcon2');
 
-    // Indicador de fortaleza de contraseña
-    const passInput = document.getElementById('password');
-    const bar       = document.getElementById('strengthBar');
-    const progress  = document.getElementById('strengthProgress');
-    const text      = document.getElementById('strengthText');
+    // Indicador de fortaleza
+    const levels = [
+        { label: 'Muy débil',  color: '#ef233c', width: '20%'  },
+        { label: 'Débil',      color: '#ff7b2e', width: '40%'  },
+        { label: 'Regular',    color: '#ffd166', width: '60%'  },
+        { label: 'Fuerte',     color: '#06d6a0', width: '80%'  },
+        { label: 'Muy fuerte', color: '#06d6a0', width: '100%' },
+    ];
+
+    function passValida(v) {
+        return v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v);
+    }
 
     passInput.addEventListener('input', function () {
-        const val = this.value;
-        if (!val) { bar.style.display = 'none'; return; }
+        const v = this.value;
+        if (!v) { bar.style.display = 'none'; revisarHabilitacion(); return; }
         bar.style.display = 'block';
 
         let score = 0;
-        if (val.length >= 8)  score++;
-        if (val.length >= 12) score++;
-        if (/[A-Z]/.test(val)) score++;
-        if (/[0-9]/.test(val)) score++;
-        if (/[^A-Za-z0-9]/.test(val)) score++;
+        if (v.length >= 8)           score++;
+        if (v.length >= 12)          score++;
+        if (/[A-Z]/.test(v))         score++;
+        if (/[0-9]/.test(v))         score++;
+        if (/[^A-Za-z0-9]/.test(v))  score++;
 
-        const levels = [
-            { label: 'Muy débil',  color: '#ef233c', width: '20%' },
-            { label: 'Débil',      color: '#ff7b2e', width: '40%' },
-            { label: 'Regular',    color: '#ffd166', width: '60%' },
-            { label: 'Fuerte',     color: '#06d6a0', width: '80%' },
-            { label: 'Muy fuerte', color: '#06d6a0', width: '100%' },
-        ];
-        const lvl = levels[Math.min(score - 1, 4)] || levels[0];
+        const lvl = levels[Math.min(score - 1, 4)] ?? levels[0];
         progress.style.width           = lvl.width;
         progress.style.backgroundColor = lvl.color;
-        text.textContent               = lvl.label;
-        text.style.color               = lvl.color;
+        strengthText.textContent       = passValida(v) ? lvl.label : lvl.label + ' — falta mayúscula o número';
+        strengthText.style.color       = lvl.color;
+
+        if (confirmInput.value) checkMatch();
+        revisarHabilitacion();
     });
 
-    // Verificar coincidencia de contraseñas
-    const confirmInput = document.getElementById('confirmar_password');
-    const matchMsg     = document.getElementById('matchMsg');
+    // Coincidencia
+    function checkMatch() {
+        matchMsg.style.cssText = 'display:block!important';
+        if (confirmInput.value === passInput.value) {
+            matchMsg.textContent = '✓ Las contraseñas coinciden';
+            matchMsg.style.color = '#06d6a0';
+        } else {
+            matchMsg.textContent = '✗ Las contraseñas no coinciden';
+            matchMsg.style.color = '#ef233c';
+        }
+    }
 
     confirmInput.addEventListener('input', function () {
-        if (!this.value) { matchMsg.style.display = 'none'; return; }
-        matchMsg.style.display = 'block';
-        if (this.value === passInput.value) {
-            matchMsg.textContent  = '✓ Las contraseñas coinciden';
-            matchMsg.style.color  = '#06d6a0';
-        } else {
-            matchMsg.textContent  = '✗ Las contraseñas no coinciden';
-            matchMsg.style.color  = '#ef233c';
-        }
+        if (!this.value) { matchMsg.style.cssText = 'display:none!important'; }
+        else checkMatch();
+        revisarHabilitacion();
     });
 
-    // Habilitar botón solo si acepta términos
-    const checkbox  = document.getElementById('aceptaTerminos');
-    const submitBtn = document.getElementById('submitBtn');
+    checkbox.addEventListener('change', revisarHabilitacion);
 
-    checkbox.addEventListener('change', function () {
-        submitBtn.disabled = !this.checked;
-    });
+    // Habilitar submit solo si todo es correcto
+    function revisarHabilitacion() {
+        submitBtn.disabled = !(
+            checkbox.checked &&
+            passValida(passInput.value) &&
+            passInput.value === confirmInput.value &&
+            confirmInput.value.length > 0
+        );
+    }
 
-    // Aceptar desde el modal marca el checkbox automáticamente
+    // Aceptar desde el modal
     document.getElementById('btnAceptarDesdeModal').addEventListener('click', function () {
-        checkbox.checked    = true;
-        submitBtn.disabled  = false;
+        checkbox.checked = true;
+        revisarHabilitacion();
     });
+})();
 </script>
 </body>
 </html>

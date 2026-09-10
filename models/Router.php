@@ -22,10 +22,12 @@ class Router
      */
     public function resolve(string $method, string $uri): ?array
     {
-        $uri = trim(parse_url($uri, PHP_URL_PATH), '/');
+        // Decodificar la URI para que espacios (%20) y otros caracteres
+        // coincidan correctamente con el BASE_URL calculado desde DOCUMENT_ROOT
+        $uri = trim(urldecode(parse_url($uri, PHP_URL_PATH)), '/');
 
-        // Quitar el prefijo del subdirectorio si existe (ej: GastroDigital-11-2)
-        $base = trim(parse_url(BASE_URL, PHP_URL_PATH), '/');
+        // Quitar el prefijo del subdirectorio si existe (ej: GastroDigital 2.0)
+        $base = trim(urldecode(parse_url(BASE_URL, PHP_URL_PATH)), '/');
         if ($base && str_starts_with($uri, $base)) {
             $uri = trim(substr($uri, strlen($base)), '/');
         }

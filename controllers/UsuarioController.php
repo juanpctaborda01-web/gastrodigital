@@ -2,92 +2,97 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../models/usuarios.php';
 
-requireLogin();
+class UsuarioController
+{
+    private Usuario $model;
 
-$model  = new Usuario();
-$accion = $_GET['accion'] ?? '';
+    public function __construct()
+    {
+        $this->model = new Usuario();
+    }
 
-// Verificar CSRF en todas las acciones POST
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verificarCsrf();
-}
+    /** POST /api/perfil/guardar — guardar perfil desde dashboard usuario o chef */
+    public function guardarPerfil(): void
+    {
+        requireLogin();
+        verificarCsrf();
 
-switch ($accion) {
+        $id    = (int)$_SESSION['usuario_id'];
+        $nombre       = trim($_POST['nombre']         ?? '');
+        $bio          = trim($_POST['bio']            ?? '');
+        $redes        = trim($_POST['redes_sociales'] ?? '');
+        $especialidad = trim($_POST['especialidad']   ?? '');
+        $avatar       = '';
 
-    // Guardar perfil del usuario
-    case 'guardarPerfil':
-        $id = (int)($_POST['usuario_id'] ?? $_SESSION['usuario_id'] ?? 0);
-        if (!$id || $id !== (int)($_SESSION['usuario_id'] ?? 0)) {
-            $_SESSION['error'] = 'No puedes actualizar ese perfil.';
-            redirect('dashboard');
+        if (empty($nombre)) {
+            $_SESSION['error'] = 'El nombre no puede estar vacío.';
+            $this->redirigirPorRol();
         }
 
-        $nombre = $_POST['nombre'] ?? '';
-        $avatar = $_POST['avatar'] ?? '';
-        $bio = $_POST['bio'] ?? '';
-        $redesSociales = $_POST['redes_sociales'] ?? '';
-        $especialidad = $_POST['especialidad'] ?? '';
-
+        // Subida de avatar
         if (!empty($_FILES['avatar_file']['name'])) {
-            $rutaDestino = UPLOAD_PATH;
-            $archivoSubido = procesarImagenUpload($_FILES['avatar_file'], $rutaDestino);
-            if ($archivoSubido) {
-                $avatar = $archivoSubido;
+            require_once __DIR__ . '/../config/seguridad.php';
+            $subido = procesarImagenUpload($_FILES['avatar_file'], UPLOAD_PATH);
+            if ($subido) {
+                $avatar = $subido;
             } else {
-                $_SESSION['error'] = 'La imagen de perfil no es válida.';
-                $rolActual = $_SESSION['rol'] ?? 'usuario';
-                $redirectPath = match ($rolActual) {
-                    ROL_ADMIN => 'admin',
-                    ROL_CHEF  => 'mis-recetas',
-                    default   => 'dashboard',
-                };
-                redirect($redirectPath);
+                $_SESSION['error'] = 'La imagen no es válida (JPG, PNG, WEBP · máx. 3 MB).';
+                $this->redirigirPorRol();
             }
         }
 
-        if ($model->actualizarPerfil($id, $nombre, $avatar, $bio, $redesSociales, $especialidad)) {
+        if ($this->model->actualizarPerfil($id, $nombre, $avatar, $bio, $redes, $especialidad)) {
             $_SESSION['usuario_nombre'] = $nombre;
+            if ($avatar) {
+                $_SESSION['usuario_avatar'] = $avatar;
+            }
             $_SESSION['exito'] = 'Perfil actualizado correctamente.';
         } else {
             $_SESSION['error'] = 'No se pudo guardar el perfil.';
         }
+        $this->redirigirPorRol();
+    }
 
-        $rolActual = $_SESSION['rol'] ?? 'usuario';
-        $redirectPath = match ($rolActual) {
-            ROL_ADMIN => 'admin',
-            ROL_CHEF  => 'mis-recetas',
-            default   => 'dashboard',
+    private function redirigirPorRol(): never
+    {
+        match ($_SESSION['rol'] ?? 'usuario') {
+            ROL_ADMIN => redirect('admin'),
+            ROL_CHEF  => redirect('mis-recetas'),
+            default   => redirect('dashboard'),
         };
-        redirect($redirectPath);
-        break;
+    }
 
-    // Cambiar rol de un usuario
-    case 'cambiarRol':
+    /** POST /admin/usuario/rol — cambiar rol de un usuario */
+    public function cambiarRol(): void
+    {
         requireRole(ROL_ADMIN);
-        $id  = (int)($_POST['id'] ?? 0);
+        verificarCsrf();
+
+        $id  = (int)($_POST['id']  ?? 0);
         $rol = $_POST['rol'] ?? '';
+
         if (!$id || !in_array($rol, ['admin', 'chef', 'usuario'])) {
             $_SESSION['error'] = 'Datos inválidos.';
         } else {
-            $model->actualizarRol($id, $rol);
+            $this->model->actualizarRol($id, $rol);
             $_SESSION['exito'] = 'Rol actualizado correctamente.';
         }
         redirect('admin/usuarios');
-        break;
+    }
 
-    // Eliminar usuario
-    case 'eliminar':
+    /** POST /admin/usuario/eliminar — eliminar un usuario */
+    public function eliminar(): void
+    {
         requireRole(ROL_ADMIN);
+        verificarCsrf();
+
         $id = (int)($_POST['id'] ?? 0);
         if ($id && $id !== (int)$_SESSION['usuario_id']) {
-            $model->eliminar($id);
+            $this->model->eliminar($id);
             $_SESSION['exito'] = 'Usuario eliminado.';
         } else {
             $_SESSION['error'] = 'No puedes eliminarte a ti mismo.';
         }
         redirect('admin/usuarios');
-        break;
-
-    default:
-        redirect('admin/usuarios');
+    }
 }

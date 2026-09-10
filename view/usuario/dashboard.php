@@ -166,10 +166,15 @@ $categorias = $catModel->listarSimple();
             </div>
             <div class="d-flex flex-wrap gap-2 mb-5">
                 <?php foreach ($categorias as $cat): ?>
-                <a href="<?= BASE_URL ?>/index.php?route=recetas&categoria=<?= urlencode($cat['nombre']) ?>"
+                <a href="<?= BASE_URL ?>/recetas?categoria=<?= urlencode($cat['nombre']) ?>"
                    class="categoria-chip"
                    style="--chip-color:<?= htmlspecialchars($cat['color']) ?>;--chip-bg:<?= htmlspecialchars($cat['bg']) ?>">
-                    <i class="bi <?= htmlspecialchars($cat['icono']) ?>"></i>
+                    <?php if (!empty($cat['img'])): ?>
+                        <img src="<?= BASE_URL ?>/img/Icon/<?= htmlspecialchars($cat['img']) ?>"
+                             alt="" class="categoria-chip-img">
+                    <?php else: ?>
+                        <i class="bi <?= htmlspecialchars($cat['icono']) ?>"></i>
+                    <?php endif; ?>
                     <span><?= htmlspecialchars($cat['nombre']) ?></span>
                 </a>
                 <?php endforeach; ?>

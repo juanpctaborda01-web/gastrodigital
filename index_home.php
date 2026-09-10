@@ -39,10 +39,10 @@ $pageTitle = 'Inicio';
                         tiempo o dificultad y cocina algo increíble hoy.
                     </p>
                     <div class="d-flex flex-wrap gap-3 mt-4">
-                        <a href="<?= BASE_URL ?>/index.php?route=recetas" class="btn btn-hero-primary">
+                        <a href="<?= BASE_URL ?>/recetas" class="btn btn-hero-primary">
                             <i class="bi bi-search me-2"></i>Explorar recetas
                         </a>
-                        <a href="<?= BASE_URL ?>/index.php?route=register" class="btn btn-hero-outline">
+                        <a href="<?= BASE_URL ?>/register" class="btn btn-hero-outline">
                             <i class="bi bi-person-plus me-2"></i>Unirme gratis
                         </a>
                     </div>
@@ -68,13 +68,17 @@ $pageTitle = 'Inicio';
                 <div class="col-lg-6 d-none d-lg-flex justify-content-center">
                     <div class="hero-cards-stack">
                         <?php
-                        $iconos = ['bi-egg-fried', 'bi-fire', 'bi-cup-hot'];
+                        $iconos = [
+                            BASE_URL . '/img/Icon/comida-china.png',
+                            BASE_URL . '/img/Icon/taco.png',
+                            BASE_URL . '/img/Icon/panna-cotta.png',
+                        ];
                         $clases = ['card-1', 'card-2', 'card-3'];
                         $muestra = array_slice($destacadas, 0, 3);
                         foreach ($muestra as $idx => $r):
                         ?>
                         <div class="hero-float-card <?= $clases[$idx] ?>">
-                            <i class="bi <?= $iconos[$idx] ?>"></i>
+                            <img src="<?= $iconos[$idx] ?>" alt="" class="hero-float-icon">
                             <span><?= htmlspecialchars($r['titulo']) ?></span>
                             <small>⏱ <?= $r['tiempo_preparacion'] ?> min · <?= htmlspecialchars($r['categoria'] ?? '') ?></small>
                         </div>
@@ -101,10 +105,16 @@ $pageTitle = 'Inicio';
             </div>
             <div class="categorias-scroll">
                 <?php foreach ($categorias as $cat): ?>
-                <a href="<?= BASE_URL ?>/index.php?route=recetas&categoria=<?= urlencode($cat['nombre']) ?>"
+                <a href="<?= BASE_URL ?>/recetas?categoria=<?= urlencode($cat['nombre']) ?>"
                    class="categoria-chip"
                    style="--chip-color:<?= htmlspecialchars($cat['color']) ?>;--chip-bg:<?= htmlspecialchars($cat['bg']) ?>">
-                    <i class="bi <?= htmlspecialchars($cat['icono']) ?>"></i>
+                    <?php if (!empty($cat['img'])): ?>
+                        <img src="<?= BASE_URL ?>/img/Icon/<?= htmlspecialchars($cat['img']) ?>"
+                             alt="<?= htmlspecialchars($cat['nombre']) ?>"
+                             class="categoria-chip-img">
+                    <?php else: ?>
+                        <i class="bi <?= htmlspecialchars($cat['icono']) ?>"></i>
+                    <?php endif; ?>
                     <span><?= htmlspecialchars($cat['nombre']) ?></span>
                 </a>
                 <?php endforeach; ?>
@@ -120,7 +130,7 @@ $pageTitle = 'Inicio';
                     <span class="section-tag">Populares</span>
                     <h2 class="section-title mb-0">Recetas destacadas</h2>
                 </div>
-                <a href="<?= BASE_URL ?>/index.php?route=recetas"
+                <a href="<?= BASE_URL ?>/recetas"
                    class="btn btn-outline-primary btn-sm d-none d-md-flex align-items-center gap-1">
                     Ver todas <i class="bi bi-arrow-right"></i>
                 </a>
@@ -164,7 +174,7 @@ $pageTitle = 'Inicio';
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0 pb-3">
-                            <a href="<?= BASE_URL ?>/index.php?route=recetas&id=<?= $r['id'] ?>"
+                            <a href="<?= BASE_URL ?>/recetas/<?= $r['id'] ?>"
                                class="btn btn-outline-primary btn-sm w-100">
                                 Ver receta <i class="bi bi-arrow-right ms-1"></i>
                             </a>
@@ -214,10 +224,10 @@ $pageTitle = 'Inicio';
             <h2 class="cta-title">¿Listo para cocinar algo increíble?</h2>
             <p class="cta-subtitle">Únete a cocineros apasionados en GastroDigital</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap mt-4">
-                <a href="<?= BASE_URL ?>/index.php?route=register" class="btn btn-hero-primary btn-lg">
+                <a href="<?= BASE_URL ?>/register" class="btn btn-hero-primary btn-lg">
                     <i class="bi bi-person-plus me-2"></i>Crear cuenta gratis
                 </a>
-                <a href="<?= BASE_URL ?>/index.php?route=login" class="btn btn-hero-outline btn-lg">
+                <a href="<?= BASE_URL ?>/login" class="btn btn-hero-outline btn-lg">
                     <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
                 </a>
             </div>

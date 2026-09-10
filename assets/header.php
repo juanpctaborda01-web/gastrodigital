@@ -18,14 +18,24 @@ if (strpos($_SERVER['PHP_SELF'] ?? '', '/view/auth/') !== false) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($pageTitle) ?> | GastroDigital</title>
+    <!-- Meta datos para JS global -->
+    <meta name="base-url" content="<?= htmlspecialchars(rtrim(BASE_URL, '/')) ?>">
+    <meta name="user-rol" content="<?= htmlspecialchars($_SESSION['rol'] ?? '') ?>">
+    <!-- Aplicar tema guardado antes de renderizar para evitar flash de pantalla blanca -->
+    <script>
+        (function(){
+            var t = localStorage.getItem('gd_theme');
+            if (t) document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <!-- Estilos propios — v=2.3 fuerza recarga de caché -->
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=2.3">
+    <!-- Estilos propios — v=2.4 fuerza recarga de caché -->
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=2.4">
     <link rel="stylesheet" href="<?= $baseUrl ?>/styles/chatbot.css?v=2.2">
     <?php if (isset($extraCss)): ?>
         <link rel="stylesheet" href="<?= $baseUrl ?>/styles/<?= $extraCss ?>">

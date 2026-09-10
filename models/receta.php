@@ -50,7 +50,7 @@ class Receta {
         // Recetas de esta página
         $sql = "SELECT DISTINCT r.id, r.titulo, r.descripcion, r.tiempo_preparacion,
                        r.dificultad, r.categoria_id, r.pais, r.imagen, r.calorias, r.porciones,
-                       r.destacada, r.visitas,
+                       r.chef_id, r.destacada, r.visitas,
                        u.nombre AS chef_nombre,
                        ROUND(AVG(v.puntuacion), 1) AS rating,
                        COUNT(DISTINCT v.id)         AS total_valoraciones
@@ -129,7 +129,7 @@ class Receta {
     // Obtener receta completa con ingredientes, pasos, valoraciones y comentarios
     public function obtenerCompleta(int $id): ?array {
         $stmt = $this->pdo->prepare("
-            SELECT r.*, u.nombre AS chef_nombre, u.bio AS chef_bio,
+            SELECT r.*, u.nombre AS chef_nombre, u.bio AS chef_bio, u.avatar AS chef_avatar,
                    ROUND(AVG(v.puntuacion), 1) AS rating,
                    COUNT(DISTINCT v.id) AS total_valoraciones
             FROM recetas r
@@ -152,9 +152,10 @@ class Receta {
         $stmt3->execute([$id]);
         $receta['pasos'] = $stmt3->fetchAll();
 
-        // Comentarios
+        // Comentarios (incluye avatar del autor)
         $stmt4 = $this->pdo->prepare("
-            SELECT c.*, u.nombre AS autor FROM comentarios c
+            SELECT c.*, u.nombre AS autor, u.avatar AS autor_avatar
+            FROM comentarios c
             JOIN usuarios u ON u.id = c.usuario_id
             WHERE c.receta_id = ? ORDER BY c.created_at ASC
         ");
@@ -189,7 +190,7 @@ class Receta {
         $stmt = $this->pdo->prepare("
             INSERT INTO recetas (titulo, descripcion, tiempo_preparacion, porciones,
                                  dificultad, categoria_id, imagen, calorias, chef_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $datos['titulo'],
@@ -197,8 +198,7 @@ class Receta {
             (int)$datos['tiempo'],
             (int)($datos['porciones'] ?? 4),
             $datos['dificultad'],
-            $datos['categoria_id'] ?? null,
-            $datos['categoria'],
+            $datos['categoria_id'] ?? ($datos['categoria'] ?? null),
             $datos['imagen'] ?? null,
             $datos['calorias'] ?? null,
             $chefId,
@@ -403,7 +403,7 @@ class Receta {
     public function comentariosPorChef(int $chefId): array {
         $stmt = $this->pdo->prepare("
             SELECT c.id, c.contenido, c.created_at,
-                   u.nombre AS autor,
+                   u.nombre AS autor, u.avatar AS autor_avatar,
                    r.titulo AS receta_titulo, r.id AS receta_id
             FROM comentarios c
             JOIN recetas  r ON r.id = c.receta_id

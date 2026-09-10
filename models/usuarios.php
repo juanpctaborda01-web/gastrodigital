@@ -148,6 +148,12 @@ class Usuario {
         return (int)$stmt->fetchColumn();
     }
 
+    // Cambiar contraseña del usuario
+    public function cambiarPassword(int $id, string $hash): bool {
+        $stmt = $this->pdo->prepare("UPDATE usuarios SET password = ? WHERE id = ?");
+        return $stmt->execute([$hash, $id]);
+    }
+
     // Actualizar rol
     public function actualizarRol($id, $rol) {
         $stmt = $this->pdo->prepare("UPDATE usuarios SET rol = ? WHERE id = ?");

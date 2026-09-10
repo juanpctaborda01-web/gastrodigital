@@ -25,13 +25,15 @@ class RouterController
         $r->add('GET',  'register', ['PageController',  'register']);
         $r->add('POST', 'register', ['AuthController',  'registro']);
         $r->add('GET',  'logout',   ['AuthController',  'logout']);
-        $r->add('POST', 'chatbot',  ['ChatbotController', 'respuesta']);
 
         // ── Usuario ───────────────────────────────────────────────────────
-        $r->add('GET',  'dashboard',  ['PageController', 'dashboardUsuario']);
-        $r->add('GET',  'recetas',    ['PageController', 'verRecetas']);
-        $r->add('GET',  'favoritos',  ['PageController', 'favoritos']);
-        $r->add('POST', 'favorito',   ['PageController', 'favorito']);
+        $r->add('GET',  'dashboard',       ['PageController', 'dashboardUsuario']);
+        $r->add('GET',  'recetas',         ['PageController', 'verRecetas']);
+        $r->add('GET',  'favoritos',       ['PageController', 'favoritos']);
+        $r->add('GET',  'categorias', ['PageController', 'categorias']);
+        $r->add('GET',  'perfil',          ['PageController', 'perfil']);
+        $r->add('POST', 'perfil/guardar',  ['PerfilController', 'guardar']);
+        $r->add('GET',  'chef/(\d+)',       ['PageController', 'perfilChef']);
 
         // ── Chef ──────────────────────────────────────────────────────────
         $r->add('GET',  'mis-recetas',   ['PageController', 'misRecetas']);
@@ -39,18 +41,49 @@ class RouterController
         $r->add('GET',  'editar-receta', ['PageController', 'editarReceta']);
 
         // ── Admin ─────────────────────────────────────────────────────────
-        $r->add('GET',  'admin',             ['PageController', 'dashboardAdmin']);
-        $r->add('GET',  'admin/usuarios',    ['PageController', 'adminUsuarios']);
-        $r->add('GET',  'admin/categorias',  ['PageController', 'adminCategorias']);
-        $r->add('GET',  'admin/reportes',    ['PageController', 'adminReportes']);
+        $r->add('GET',  'admin',                     ['PageController',     'dashboardAdmin']);
+        $r->add('GET',  'admin/usuarios',            ['PageController',     'adminUsuarios']);
+        $r->add('GET',  'admin/categorias',          ['PageController',     'adminCategorias']);
+        $r->add('GET',  'admin/reportes',            ['PageController',     'adminReportes']);
+        $r->add('GET',  'admin/moderacion',          ['PageController',     'adminModeracion']);
+        $r->add('POST', 'admin/moderacion/accion',   ['ReporteController',  'accion']);
+        $r->add('POST', 'admin/moderacion/borrar-comentario', ['ModeraController', 'borrarComentario']);
+        $r->add('POST', 'admin/moderacion/borrar-valoracion', ['ModeraController', 'borrarValoracion']);
+        $r->add('POST', 'admin/categoria/crear',     ['CategoriaController','crear']);
+        $r->add('POST', 'admin/categoria/eliminar',  ['CategoriaController','eliminar']);
+        $r->add('POST', 'admin/usuario/rol',         ['UsuarioController',  'cambiarRol']);
+        $r->add('POST', 'admin/usuario/eliminar',    ['UsuarioController',  'eliminar']);
+
+        // ── Reportes (AJAX) ────────────────────────────────────────────────
+        $r->add('POST', 'api/reportar',              ['ReporteController',  'crear']);
+
+        // ── Chatbot API ────────────────────────────────────────────────────
+        $r->add('GET',  'api/chatbot/token', ['ChatbotController', 'token']);
+        $r->add('POST', 'api/chatbot',       ['ChatbotController', 'responder']);
+
+        // ── Acciones de recetas ────────────────────────────────────────────
+        $r->add('POST', 'api/favorito',        ['RecetaController',    'favoritoAjax']);
+        $r->add('POST', 'api/valorar',         ['RecetaController',    'valorarAjax']);
+        $r->add('POST', 'api/receta/eliminar', ['RecetaController',    'eliminarAjax']);
+        $r->add('POST', 'api/receta/crear',    ['RecetaController',    'crearForm']);
+        $r->add('POST', 'api/receta/editar',   ['RecetaController',    'editarForm']);
+
+        // ── Token CSRF para fetch AJAX ─────────────────────────────────────
+        $r->add('GET',  'api/csrf',            ['RecetaController',    'csrfToken']);
+
+        // ── Comentarios, búsqueda y notificaciones ─────────────────────────
+        $r->add('POST', 'api/comentario',      ['ComentarioController','crear']);
+        $r->add('GET',  'api/buscar',          ['ComentarioController','buscar']);
+        $r->add('GET',  'api/notificaciones',  ['ComentarioController','notificaciones']);
+
+        // ── Perfil (usuario y chef) ────────────────────────────────────────
+        $r->add('POST', 'api/perfil/guardar', ['UsuarioController', 'guardarPerfil']);
     }
 
     public function dispatch(): void
     {
         $method = $_SERVER['REQUEST_METHOD'];
-        $uri    = isset($_GET['route'])
-            ? '/' . ltrim((string) $_GET['route'], '/')
-            : $_SERVER['REQUEST_URI'];
+        $uri    = $_SERVER['REQUEST_URI'];
 
         $match = $this->router->resolve($method, $uri);
 

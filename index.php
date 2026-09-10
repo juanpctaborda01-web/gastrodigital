@@ -6,11 +6,18 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/controllers/RouterController.php';
 
-$route = $_GET['route'] ?? null;
-$uri = $route !== null
-    ? '/' . ltrim((string) $route, '/')
-    : parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$path = trim($uri, '/');
+// Soporte para ?route= (fallback sin mod_rewrite)
+// Si viene ?route=login, sobreescribimos REQUEST_URI para que el router lo procese igual
+$routeParam = $_GET['route'] ?? null;
+if ($routeParam !== null) {
+    // Construir una URI limpia que el router pueda resolver
+    $basePath = rtrim(parse_url(BASE_URL, PHP_URL_PATH), '/');
+    $_SERVER['REQUEST_URI'] = $basePath . '/' . ltrim($routeParam, '/');
+}
+
+$uri  = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
+$base = rtrim(urldecode(parse_url(BASE_URL, PHP_URL_PATH)), '/');
+$path = trim($base ? substr($uri, strlen($base)) : $uri, '/');
 
 if ($path === '' || $path === 'index.php') {
     require_once __DIR__ . '/index_home.php';

@@ -17,19 +17,17 @@ class AuthController {
 
         verificarCsrf();
 
-        $email    = trim(filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL));
-        $password = $_POST['password'] ?? '';
-
         if (loginBloqueado()) {
             $min = ceil(tiempoRestanteBloqueo() / 60);
             $_SESSION['error'] = "Demasiados intentos fallidos. Espera {$min} minuto(s).";
-            $_SESSION['login_email'] = $email;
             redirect('login');
         }
 
+        $email    = trim(filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL));
+        $password = $_POST['password'] ?? '';
+
         if (empty($email) || empty($password) || !validarEmail($email)) {
             $_SESSION['error'] = 'Por favor completa todos los campos correctamente.';
-            $_SESSION['login_email'] = $email;
             redirect('login');
         }
 
@@ -38,25 +36,23 @@ class AuthController {
         if (!$usuario) {
             registrarIntentoLogin();
             $_SESSION['error'] = 'Correo o contraseña incorrectos.';
-            $_SESSION['login_email'] = $email;
             redirect('login');
         }
 
         if (isset($usuario['activo']) && !$usuario['activo']) {
             $_SESSION['error'] = 'Tu cuenta está suspendida. Contacta al administrador.';
-            $_SESSION['login_email'] = $email;
             redirect('login');
         }
 
         // Login exitoso
         resetIntentoLogin();
-        unset($_SESSION['login_email']);
         regenerarSesion();
 
         $_SESSION['usuario_id']     = $usuario['id'];
         $_SESSION['usuario_nombre'] = $usuario['nombre'];
         $_SESSION['usuario_email']  = $usuario['email'];
         $_SESSION['rol']            = $usuario['rol'];
+        $_SESSION['usuario_avatar'] = $usuario['avatar'] ?? null;
 
         // Recordar sesión: guardar cookie si el usuario lo pidió
         if (!empty($_POST['recordarme'])) {
@@ -139,14 +135,14 @@ class AuthController {
                 $p['path'], $p['domain'], $p['secure'], $p['httponly']);
         }
         session_destroy();
-        redirect('index.php?route=recetas');
+        redirect('login');
     }
 
     private function redirigirPorRol(string $rol): void {
         match ($rol) {
-            ROL_ADMIN => redirect('index.php?route=admin'),
-            ROL_CHEF  => redirect('index.php?route=mis-recetas'),
-            default   => redirect('index.php?route=dashboard'),
+            ROL_ADMIN => redirect('admin'),
+            ROL_CHEF  => redirect('mis-recetas'),
+            default   => redirect('dashboard'),
         };
     }
 }

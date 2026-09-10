@@ -84,7 +84,7 @@ if ($ejecutar) {
                                       / max(1, count(array_filter(array_column($resultados, 'rating')))), 1),
             ];
             foreach ($resultados as $fila) {
-                $categoria = $fila['categoria'] ?: 'Sin categoría';
+                $categoria  = ($fila['categoria_id'] ?? $fila['categoria'] ?? null) ?: 'Sin categoría';
                 $dificultad = $fila['dificultad'] ?: 'Sin dificultad';
                 $datosGraficas['categorias'][$categoria] = ($datosGraficas['categorias'][$categoria] ?? 0) + 1;
                 $datosGraficas['dificultades'][$dificultad] = ($datosGraficas['dificultades'][$dificultad] ?? 0) + 1;

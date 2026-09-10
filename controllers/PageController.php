@@ -21,11 +21,15 @@ class PageController
     public function dashboardUsuario(): void
     {
         requireLogin();
+        // Chef y admin tienen sus propios dashboards — redirigir si corresponde
+        if (hasRole(ROL_CHEF))  redirect('mis-recetas');
+        if (hasRole(ROL_ADMIN)) redirect('admin');
         require_once __DIR__ . '/../view/usuario/dashboard.php';
     }
 
     public function verRecetas(): void
     {
+        // Accesible para todos (visitantes y logueados)
         require_once __DIR__ . '/../view/usuario/ver_recetas.php';
     }
 
@@ -35,29 +39,26 @@ class PageController
         require_once __DIR__ . '/../view/usuario/favoritos.php';
     }
 
-    public function favorito(): void
+    public function categorias(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         requireLogin();
+        require_once __DIR__ . '/../view/usuario/categorias.php';
+    }
 
-        $tokenPost = $_POST['csrf_token'] ?? '';
-        $tokenSesion = $_SESSION['csrf_token'] ?? '';
-        if (!$tokenPost || !$tokenSesion || !hash_equals($tokenSesion, $tokenPost)) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Petición no válida']);
-            return;
+    public function perfil(): void
+    {
+        requireLogin();
+        require_once __DIR__ . '/../view/usuario/perfil.php';
+    }
+
+    public function perfilChef(string $chefId = ''): void
+    {
+        // El ID viene como parámetro capturado por el regex del router
+        if (!$chefId) {
+            $chefId = $_GET['id'] ?? '0';
         }
-
-        $recetaId = (int)($_POST['receta_id'] ?? 0);
-        if (!$recetaId) {
-            http_response_code(422);
-            echo json_encode(['error' => 'ID inválido']);
-            return;
-        }
-
-        require_once __DIR__ . '/../models/receta.php';
-        $resultado = (new Receta())->toggleFavorito((int)$_SESSION['usuario_id'], $recetaId);
-        echo json_encode($resultado);
+        $_GET['chef_id'] = (int)$chefId;
+        require_once __DIR__ . '/../view/usuario/perfil_chef.php';
     }
 
     // ── Chef ──────────────────────────────────────────────────────────────────
@@ -111,5 +112,12 @@ class PageController
         requireLogin();
         requireRole(ROL_ADMIN);
         require_once __DIR__ . '/../view/admin/reportes.php';
+    }
+
+    public function adminModeracion(): void
+    {
+        requireLogin();
+        requireRole(ROL_ADMIN);
+        require_once __DIR__ . '/../view/admin/moderacion.php';
     }
 }

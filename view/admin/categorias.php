@@ -41,8 +41,13 @@ unset($_SESSION['exito'], $_SESSION['error']);
                         <div class="card-body d-flex align-items-center gap-3">
                             <div class="rounded-circle d-flex align-items-center justify-content-center"
                                  style="width:48px;height:48px;background:<?= htmlspecialchars($cat['bg']) ?>;flex-shrink:0">
-                                <i class="bi <?= htmlspecialchars($cat['icono']) ?>"
-                                   style="color:<?= htmlspecialchars($cat['color']) ?>;font-size:1.4rem"></i>
+                                <?php if (!empty($cat['img'])): ?>
+                                    <img src="<?= BASE_URL ?>/img/Icon/<?= htmlspecialchars($cat['img']) ?>"
+                                         alt="" style="width:28px;height:28px;object-fit:contain">
+                                <?php else: ?>
+                                    <i class="bi <?= htmlspecialchars($cat['icono']) ?>"
+                                       style="color:<?= htmlspecialchars($cat['color']) ?>;font-size:1.4rem"></i>
+                                <?php endif; ?>
                             </div>
                             <div class="flex-grow-1">
                                 <div class="fw-700"><?= htmlspecialchars($cat['nombre']) ?></div>

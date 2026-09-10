@@ -1,384 +1,623 @@
-<?php
-/**
- * ChatbotController.php
- * Endpoint AJAX que recibe un mensaje y devuelve una respuesta JSON.
- * No requiere APIs externas — trabaja con la BD local.
- */
+﻿<?php
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/chatbot.php';
+require_once __DIR__ . '/../config/categorias.php';
 require_once __DIR__ . '/../models/receta.php';
-require_once __DIR__ . '/../models/ingrediente.php';
 
-class ChatbotController {
-    public function respuesta(): void {
+/**
+ * ChatbotController — "Chef Bot", asistente gastronómico de GastroDigital.
+ *
+ * Estrategia: BASE DE DATOS PRIMERO, IA DESPUÉS.
+ *
+ * Flujo:
+ *  1. Recibir mensaje del usuario.
+ *  2. Identificar intención (buscar receta, ingredientes, pasos, etc.).
+ *  3. Buscar en MySQL con score de relevancia — sin inventar ni forzar coincidencias.
+ *  4. Si hay datos exactos (ingredientes/pasos), construirlos directamente desde MySQL.
+ *  5. Ollama solo redacta la respuesta natural — NO puede modificar los datos.
+ *
+ * Motor de IA: Ollama local — http://localhost:11434/api/generate
+ * Modelo:      llama3.2:3b  (ollama pull llama3.2:3b)
+ */
+class ChatbotController
+{
+    private Receta $recetaModel;
+    private $pdo;
+
+    // ── Tipos de intención ────────────────────────────────────────────────
+    const INT_INGREDIENTES      = 'INGREDIENTES_RECETA';
+    const INT_PASOS             = 'PASOS_RECETA';
+    const INT_INFO_RECETA       = 'INFO_RECETA';
+    const INT_BUSCAR_RECETA     = 'BUSCAR_RECETA';
+    const INT_POR_INGREDIENTES  = 'BUSCAR_POR_INGREDIENTES';
+    const INT_RECOMENDAR        = 'RECOMENDAR_RECETA';
+    const INT_GENERAL           = 'INFORMACION_GENERAL';
+
+    public function __construct()
+    {
+        $this->recetaModel = new Receta();
+        require_once __DIR__ . '/../config/conexion.php';
+        $this->pdo = Conexion::getInstancia()->getPDO();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  GET /api/chatbot/token — entrega un token CSRF para el widget.
+    // ─────────────────────────────────────────────────────────────────────────
+    public function token(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        if (empty($_SESSION['chatbot_csrf'])) {
+            $_SESSION['chatbot_csrf'] = bin2hex(random_bytes(32));
+        }
+        echo json_encode(['csrf' => $_SESSION['chatbot_csrf']]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  POST /api/chatbot — recibe el mensaje y devuelve la respuesta.
+    // ─────────────────────────────────────────────────────────────────────────
+    public function responder(): void
+    {
         header('Content-Type: application/json; charset=utf-8');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
-            echo json_encode(['respuesta' => 'Método no permitido.']);
+            echo json_encode(['error' => 'Método no permitido.']);
             return;
         }
 
-        $body = json_decode(file_get_contents('php://input'), true) ?: [];
-        $tokenPost = $body['csrf_token'] ?? '';
-        $tokenSesion = $_SESSION['csrf_token'] ?? '';
-        if (!$tokenPost || !$tokenSesion || !hash_equals($tokenSesion, $tokenPost)) {
+        if (!$this->permitirEnvio()) {
+            http_response_code(429);
+            echo json_encode(['error' => 'Has enviado demasiados mensajes seguidos. Espera un momento.']);
+            return;
+        }
+
+        $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $mensaje = trim((string)($body['mensaje'] ?? $_POST['mensaje'] ?? ''));
+        $token   = (string)($body['csrf']    ?? $_POST['csrf']    ?? '');
+
+        if (empty($_SESSION['chatbot_csrf']) || !hash_equals($_SESSION['chatbot_csrf'], $token)) {
             http_response_code(403);
-            echo json_encode(['respuesta' => 'Petición no válida.']);
+            echo json_encode(['error' => 'Sesión de chat inválida. Recarga la página e intenta de nuevo.']);
             return;
         }
-
-        $mensaje = trim($body['mensaje'] ?? '');
         if ($mensaje === '') {
-            echo json_encode(['respuesta' => 'Por favor escribe algo para ayudarte.']);
+            http_response_code(400);
+            echo json_encode(['error' => 'Escribe un mensaje.']);
+            return;
+        }
+        if (mb_strlen($mensaje) > 500) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Tu mensaje es muy largo (máximo 500 caracteres).']);
             return;
         }
 
-        $bot = new ChatbotRecetas();
-        echo json_encode(['respuesta' => $bot->responder($mensaje)]);
-    }
-}
+        $historial = $_SESSION['chatbot_historial'] ?? [];
 
-// Se conserva la ejecución directa para instalaciones que aún usan esta URL.
-if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'ChatbotController.php') {
-    (new ChatbotController())->respuesta();
-    exit();
-}
+        // ── 1. Identificar intención ─────────────────────────────────────────
+        $intencion = $this->identificarIntencion($mensaje);
 
+        // ── 2. Buscar receta relevante en la BD ──────────────────────────────
+        $recetaEncontrada = null;
+        $respuesta        = null;
 
-// ─────────────────────────────────────────────────────────────────────────────
+        switch ($intencion) {
 
-class ChatbotRecetas {
+            // ── Pide ingredientes exactos ────────────────────────────────────
+            case self::INT_INGREDIENTES:
+                $recetaEncontrada = $this->buscarRecetaExacta($mensaje);
+                if ($recetaEncontrada) {
+                    // Construir lista de ingredientes directamente desde MySQL
+                    $bloqueIngredientes = $this->formatearIngredientes($recetaEncontrada);
+                    $promptOllama = $this->promptDatosFijos(
+                        "El usuario pregunta por los ingredientes de \"{$recetaEncontrada['titulo']}\".",
+                        $bloqueIngredientes,
+                        "Presenta estos ingredientes de forma amable. " .
+                        "No añadas ni quites ningún ingrediente. " .
+                        "No cambies cantidades ni unidades."
+                    );
+                    $introduccion = $this->llamarOllama($promptOllama, $historial);
+                    // Si Ollama falla, respondemos con datos puros
+                    $respuesta = $introduccion
+                        ? $introduccion . "\n\n" . $bloqueIngredientes
+                        : "Aquí están los ingredientes de \"{$recetaEncontrada['titulo']}\":\n\n" . $bloqueIngredientes;
+                } else {
+                    $respuesta = $this->respuestaNoEncontrada($mensaje);
+                }
+                break;
 
-    private Receta      $recetaModel;
-    private Ingrediente $ingredienteModel;
+            // ── Pide los pasos exactos ───────────────────────────────────────
+            case self::INT_PASOS:
+                $recetaEncontrada = $this->buscarRecetaExacta($mensaje);
+                if ($recetaEncontrada) {
+                    $bloquePasos = $this->formatearPasos($recetaEncontrada);
+                    $promptOllama = $this->promptDatosFijos(
+                        "El usuario quiere preparar \"{$recetaEncontrada['titulo']}\".",
+                        $bloquePasos,
+                        "Presenta estos pasos de forma amable. " .
+                        "No modifiques, agregues ni elimines ningún paso. " .
+                        "No cambies el orden."
+                    );
+                    $introduccion = $this->llamarOllama($promptOllama, $historial);
+                    $respuesta = $introduccion
+                        ? $introduccion . "\n\n" . $bloquePasos
+                        : "Pasos para preparar \"{$recetaEncontrada['titulo']}\":\n\n" . $bloquePasos;
+                } else {
+                    $respuesta = $this->respuestaNoEncontrada($mensaje);
+                }
+                break;
 
-    // Palabras clave → intención
-    private array $intenciones = [
-        'buscar'      => ['busca', 'buscar', 'encuentra', 'quiero', 'dame', 'muéstrame', 'mostrar', 'ver', 'receta de', 'receta para', 'cómo hago', 'cómo se hace', 'cómo preparo'],
-        'ingrediente' => ['ingrediente', 'ingredientes', 'tengo', 'con', 'usando', 'utilizo', 'uso'],
-        'tiempo'      => ['rápido', 'rápida', 'rapido', 'rapida', 'minutos', 'min', 'tiempo', 'poco tiempo', 'pronto', 'veloz'],
-        'dificultad'  => ['fácil', 'facil', 'sencillo', 'sencilla', 'difícil', 'dificil', 'complicado', 'principiante', 'experto', 'avanzado'],
-        'categoria'   => ['italiana', 'mexicana', 'japonesa', 'china', 'francesa', 'española', 'peruana', 'americana', 'postre', 'postres', 'ensalada', 'ensaladas', 'sopa', 'sopas', 'desayuno', 'almuerzo', 'cena'],
-        'pais'        => ['colombia', 'colombiana', 'argentina', 'argentina', 'perú', 'peru', 'españa', 'espana', 'méxico', 'mexico', 'brasil', 'francia', 'turquía', 'turquia', 'india', 'vietnam', 'tailandia', 'italia', 'japón', 'japon', 'estados unidos'],
-        'listar'      => ['todas', 'lista', 'listado', 'catálogo', 'catalogo', 'disponibles', 'hay'],
-        'categorias'  => ['categorías', 'categorias', 'tipos', 'tipo de receta', 'qué tipos'],
-        'saludo'      => ['hola', 'buenas', 'buenos días', 'buenas tardes', 'buenas noches', 'hey', 'hi', 'hello'],
-        'ayuda'       => ['ayuda', 'ayudar', 'help', 'qué puedes', 'que puedes', 'qué haces', 'que haces', 'opciones', 'comandos'],
-        'despedida'   => ['adiós', 'adios', 'bye', 'chao', 'hasta luego', 'nos vemos', 'gracias'],
-    ];
+            // ── Pide información general de una receta específica ────────────
+            case self::INT_INFO_RECETA:
+            case self::INT_BUSCAR_RECETA:
+                $recetaEncontrada = $this->buscarRecetaExacta($mensaje);
+                if ($recetaEncontrada) {
+                    $bloqueCompleto = $this->formatearRecetaCompleta($recetaEncontrada);
+                    $promptOllama = $this->promptDatosFijos(
+                        "El usuario pregunta sobre \"{$recetaEncontrada['titulo']}\".",
+                        $bloqueCompleto,
+                        "Resume la información de esta receta de forma amable y natural. " .
+                        "No modifiques ningún dato. No inventes información adicional."
+                    );
+                    $respuesta = $this->llamarOllama($promptOllama, $historial)
+                        ?? "Aquí tienes la información de \"{$recetaEncontrada['titulo']}\":\n\n" . $bloqueCompleto;
+                } else {
+                    $respuesta = $this->respuestaNoEncontrada($mensaje);
+                }
+                break;
 
-    private array $temasGastronomicos = [
-        'receta', 'recetas', 'cocina', 'cocinar', 'cocinero', 'chef', 'plato', 'comida',
-        'aliment', 'ingrediente', 'ingredientes', 'salsa', 'sopas', 'sopa', 'postre',
-        'desayuno', 'almuerzo', 'cena', 'horno', 'hornear', 'freír', 'freir', 'asar',
-        'hervir', 'sartén', 'sarten', 'cuchillo', 'masa', 'arroz', 'pasta', 'pollo',
-        'carne', 'pescado', 'marisco', 'verdura', 'fruta', 'pan', 'queso', 'huevo',
-        'rápida', 'rapida', 'fácil', 'facil', 'dificil', 'difícil', 'minutos', 'minuto',
-        'italian', 'mexican', 'japones', 'japonés', 'español', 'espanol', 'peruan',
-        'argentin', 'franc', 'india', 'tailand', 'ingredientes'
-    ];
+            // ── Busca recetas que tengan ciertos ingredientes ────────────────
+            case self::INT_POR_INGREDIENTES:
+                $ingredientesBuscados = $this->extraerIngredientesDeMensaje($mensaje);
+                $recetasConIngredientes = $this->buscarPorIngredientes($ingredientesBuscados);
+                if (!empty($recetasConIngredientes)) {
+                    $bloqueResultados = $this->formatearListaRecetas($recetasConIngredientes);
+                    $promptOllama = $this->promptDatosFijos(
+                        "El usuario tiene estos ingredientes: " . implode(', ', $ingredientesBuscados) . ".",
+                        $bloqueResultados,
+                        "Recomienda estas recetas de forma amable. " .
+                        "Solo menciona las recetas del listado. No inventes recetas adicionales."
+                    );
+                    $respuesta = $this->llamarOllama($promptOllama, $historial)
+                        ?? "Con esos ingredientes encontré estas recetas en GastroDigital:\n\n" . $bloqueResultados;
+                } else {
+                    $respuesta = "No encontré recetas en GastroDigital que usen esos ingredientes específicos. "
+                               . "Puedes explorar nuestro catálogo en " . BASE_URL . "/recetas";
+                }
+                break;
 
-    private array $temasNoGastronomicos = [
-        'clima', 'tiempo meteorológico', 'fútbol', 'futbol', 'deporte', 'política',
-        'politica', 'elecciones', 'religión', 'religion', 'programación', 'programacion',
-        'código', 'codigo', 'matemática', 'matematica', 'historia', 'geografía',
-        'geografia', 'música', 'musica', 'película', 'peliculas', 'videojuego',
-        'noticias', 'acciones', 'criptomoneda', 'tarea escolar', 'traduce', 'viaje'
-    ];
+            // ── Pide recomendaciones por categoría/dificultad/tiempo ─────────
+            case self::INT_RECOMENDAR:
+                $recetasRecomendadas = $this->buscarParaRecomendacion($mensaje);
+                if (!empty($recetasRecomendadas)) {
+                    $bloqueRec = $this->formatearListaRecetas($recetasRecomendadas);
+                    $promptOllama = $this->promptDatosFijos(
+                        "El usuario pide recomendaciones.",
+                        $bloqueRec,
+                        "Recomienda estas recetas de forma amable y entusiasta. " .
+                        "Solo menciona las del listado. No inventes otras."
+                    );
+                    $respuesta = $this->llamarOllama($promptOllama, $historial)
+                        ?? "Aquí van mis recomendaciones de GastroDigital:\n\n" . $bloqueRec;
+                } else {
+                    $respuesta = "No encontré recetas que coincidan con tu búsqueda en GastroDigital. "
+                               . "Prueba explorar el catálogo en " . BASE_URL . "/recetas";
+                }
+                break;
 
-    private const MENSAJE_FUERA_DE_TEMA = 'Este chatbot no está diseñado para eso. Solo puedo ayudarte con información de gastronomía, recetas, ingredientes y cocina.';
+            // ── Pregunta general de cocina (técnica, sustituto, etc.) ────────
+            default: // INT_GENERAL
+                $promptGeneral = <<<PROMPT
+Eres "Chef Bot", el asistente gastronómico de GastroDigital.
+Responde en español de forma amable y concisa (máximo 4 líneas).
+Solo responde preguntas generales de cocina (técnicas, consejos, conversión de medidas).
+NO inventes recetas de GastroDigital ni afirmes que existen recetas que no has consultado.
+Si la pregunta requiere buscar una receta específica, indica que el usuario puede explorar el catálogo en: {BASE_URL}/recetas
 
-    public function __construct() {
-        $this->recetaModel      = new Receta();
-        $this->ingredienteModel = new Ingrediente();
-    }
-
-    public function responder(string $mensaje): string {
-        $lower = mb_strtolower($mensaje, 'UTF-8');
-
-        if (!$this->esGastronomico($lower)) {
-            return self::MENSAJE_FUERA_DE_TEMA;
+Usuario: {$mensaje}
+Asistente:
+PROMPT;
+                // Para preguntas generales no pasamos historial de recetas
+                $respuesta = $this->llamarOllama($promptGeneral, $historial)
+                    ?? 'Lo siento, no pude procesar tu pregunta. Por favor intenta de nuevo.';
+                break;
         }
 
-        // ── Saludo ──
-        if ($this->coincide($lower, $this->intenciones['saludo'])) {
-            return $this->saludo();
-        }
+        // ── 3. Guardar historial y devolver ──────────────────────────────────
+        $historial[] = ['role' => 'user',      'content' => $mensaje];
+        $historial[] = ['role' => 'assistant', 'content' => $respuesta];
+        $_SESSION['chatbot_historial'] = array_slice($historial, -12);
 
-        // ── Despedida ──
-        if ($this->coincide($lower, $this->intenciones['despedida'])) {
-            return "¡Hasta pronto! Espero haberte ayudado. 🍽️ Vuelve cuando quieras cocinar algo rico.";
-        }
-
-        // ── Ayuda ──
-        if ($this->coincide($lower, $this->intenciones['ayuda'])) {
-            return $this->ayuda();
-        }
-
-        // ── Categorías disponibles ──
-        if ($this->coincide($lower, $this->intenciones['categorias'])) {
-            return $this->listarCategorias();
-        }
-
-        // ── Platos típicos por país ──
-        foreach ($this->intenciones['pais'] as $pais) {
-            if (str_contains($lower, $pais)) {
-                return $this->porPais($pais);
-            }
-        }
-
-        // ── Listar todas ──
-        if ($this->coincide($lower, $this->intenciones['listar']) && !$this->coincide($lower, $this->intenciones['ingrediente'])) {
-            return $this->listarTodas();
-        }
-
-        // ── Por tiempo ──
-        if ($this->coincide($lower, $this->intenciones['tiempo'])) {
-            return $this->porTiempo($lower);
-        }
-
-        // ── Por dificultad ──
-        if ($this->coincide($lower, $this->intenciones['dificultad'])) {
-            return $this->porDificultad($lower);
-        }
-
-        // ── Por categoría ──
-        foreach ($this->intenciones['categoria'] as $cat) {
-            if (str_contains($lower, $cat)) {
-                return $this->porCategoria($cat);
-            }
-        }
-
-        // ── Por ingrediente ──
-        if ($this->coincide($lower, $this->intenciones['ingrediente'])) {
-            return $this->porIngrediente($lower);
-        }
-
-        // ── Búsqueda general (fallback) ──
-        return $this->buscarGeneral($mensaje);
-    }
-
-    // ── Respuestas ────────────────────────────────────────────────────────────
-
-    private function saludo(): string {
-        $hora = (int) date('H');
-        if ($hora < 12)     $momento = 'Buenos días';
-        elseif ($hora < 18) $momento = 'Buenas tardes';
-        else                $momento = 'Buenas noches';
-
-        return "$momento! 👨‍🍳 Soy el asistente de GastroDigital.\n\n"
-             . "Puedo ayudarte a:\n"
-             . "• 🔍 Buscar recetas por nombre\n"
-             . "• 🥕 Encontrar recetas con ingredientes que tienes\n"
-             . "• ⏱️ Recetas rápidas (por tiempo)\n"
-             . "• 📊 Filtrar por dificultad\n"
-             . "• 🌍 Explorar por categoría\n\n"
-             . "¿Qué te gustaría cocinar hoy?";
+        echo json_encode(['respuesta' => $respuesta]);
     }
 
-    private function ayuda(): string {
-        return "🤖 <strong>¿Qué puedo hacer?</strong>\n\n"
-             . "Puedes preguntarme cosas como:\n\n"
-             . "• <em>\"Busca recetas de pasta\"</em>\n"
-             . "• <em>\"Tengo pollo y tomate, ¿qué hago?\"</em>\n"
-             . "• <em>\"Recetas rápidas de menos de 30 minutos\"</em>\n"
-             . "• <em>\"Recetas fáciles para principiantes\"</em>\n"
-             . "• <em>\"Recetas italianas\"</em>\n"
-             . "• <em>\"¿Qué categorías hay?\"</em>\n"
-             . "• <em>\"Muéstrame todas las recetas\"</em>";
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Límite: máx. 12 mensajes por minuto por sesión.
+    // ─────────────────────────────────────────────────────────────────────────
+    private function permitirEnvio(): bool
+    {
+        $ahora  = time();
+        $ventana = 60;
+        $limite  = 12;
+
+        $_SESSION['chatbot_rate'] = array_filter(
+            $_SESSION['chatbot_rate'] ?? [],
+            fn($t) => $t > $ahora - $ventana
+        );
+
+        if (count($_SESSION['chatbot_rate']) >= $limite) {
+            return false;
+        }
+        $_SESSION['chatbot_rate'][] = $ahora;
+        return true;
     }
 
-    private function listarCategorias(): string {
-        $cats = $this->recetaModel->categorias();
-        if (empty($cats)) {
-            return "Aún no hay categorías registradas en la base de datos. 📂";
+    // ─────────────────────────────────────────────────────────────────────────
+    //  IDENTIFICAR INTENCIÓN
+    // ─────────────────────────────────────────────────────────────────────────
+    private function identificarIntencion(string $mensaje): string
+    {
+        $t = mb_strtolower($mensaje);
+
+        // Ingredientes
+        foreach (['ingrediente','ingredientes','necesito','lleva','llevan',
+                  'contiene','contienen','usa','usan'] as $s) {
+            if (mb_strpos($t, $s) !== false) return self::INT_INGREDIENTES;
         }
-        $lista = implode(', ', array_map(fn($c) => "• $c", $cats));
-        return "🏷️ <strong>Categorías disponibles:</strong>\n\n" . implode("\n", array_map(fn($c) => "• $c", $cats));
+        // Pasos / preparación
+        foreach (['cómo preparo','como preparo','cómo se prepara','como se prepara',
+                  'cómo se hace','como se hace','pasos','paso a paso','preparar',
+                  'preparación','preparacion','instrucciones','receta de'] as $s) {
+            if (mb_strpos($t, $s) !== false) return self::INT_PASOS;
+        }
+        // Tiene ingredientes disponibles
+        foreach (['tengo','usando','utilizo','disponibles','a base de','hecha con'] as $s) {
+            if (mb_strpos($t, $s) !== false) return self::INT_POR_INGREDIENTES;
+        }
+        // Quiere recomendación
+        foreach (['recomienda','recomiéndame','sugiéreme','sugerencia','opciones',
+                  'cuál me','qué hay de','hay alguna','muéstrame','populares','destacadas'] as $s) {
+            if (mb_strpos($t, $s) !== false) return self::INT_RECOMENDAR;
+        }
+        // Información de receta concreta
+        foreach (['qué es','que es','tiempo','duración','duracion','cuánto tarda',
+                  'cuanto tarda','dificultad','porciones','calorías','calorias'] as $s) {
+            if (mb_strpos($t, $s) !== false) return self::INT_INFO_RECETA;
+        }
+        // Palabras suficientes de comida → buscar receta
+        $stopwords = ['que','para','como','una','del','las','los','hay','quiero',
+                      'dame','me','de','en','es','si','no','un','la','le','el','con'];
+        $kw = array_diff(
+            preg_split('/[^\p{L}0-9]+/u', $t, -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            $stopwords
+        );
+        if (count($kw) >= 2) return self::INT_BUSCAR_RECETA;
+
+        return self::INT_GENERAL;
+    }
+    private function buscarRecetaExacta(string $mensaje): ?array
+    {
+        $texto     = mb_strtolower($mensaje);
+        $stopwords = ['que','para','como','puedo','tengo','hacer','receta','recetas',
+                      'con','una','unas','del','las','los','hay','quiero','dame',
+                      'dime','preparar','cocinar','ingredientes','pasos','paso',
+                      'cómo','como','me','de','en','es','no','un','la','el','se'];
+        $palabras  = preg_split('/[^\p{L}0-9]+/u', $texto, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $clave     = array_values(array_filter(
+            array_unique($palabras),
+            fn($p) => !in_array($p, $stopwords, true) && mb_strlen($p) >= 3
+        ));
+
+        if (empty($clave)) return null;
+
+        // Construir score dinámico por cada palabra clave
+        $scoreParts = [];
+        $paramsWhere = [];
+        foreach ($clave as $p) {
+            $like = '%' . $p . '%';
+            $scoreParts[] = "(CASE WHEN LOWER(r.titulo) LIKE ? THEN 10 ELSE 0 END)";
+            $paramsWhere[] = $like;
+            $scoreParts[] = "(CASE WHEN EXISTS(SELECT 1 FROM ingredientes i2 WHERE i2.receta_id=r.id AND LOWER(i2.nombre) LIKE ?) THEN 5 ELSE 0 END)";
+            $paramsWhere[] = $like;
+            $scoreParts[] = "(CASE WHEN LOWER(r.descripcion) LIKE ? THEN 2 ELSE 0 END)";
+            $paramsWhere[] = $like;
+            $scoreParts[] = "(CASE WHEN LOWER(r.categoria) LIKE ? THEN 3 ELSE 0 END)";
+            $paramsWhere[] = $like;
+        }
+        $scoreExpr   = implode(' + ', $scoreParts);
+        $allParams   = array_merge($paramsWhere, $paramsWhere);
+
+        $stmt = $this->pdo->prepare("
+            SELECT r.id, r.titulo, r.descripcion, r.tiempo_preparacion,
+                   r.porciones, r.dificultad, r.categoria, r.calorias,
+                   u.nombre AS chef_nombre,
+                   ({$scoreExpr}) AS score
+            FROM recetas r
+            LEFT JOIN usuarios u ON u.id = r.chef_id
+            WHERE r.publicada = 1 AND ({$scoreExpr}) > 0
+            ORDER BY score DESC
+            LIMIT 1
+        ");
+        $stmt->execute($allParams);
+        $fila = $stmt->fetch();
+
+        // Umbral mínimo: score >= 10 (equivale a 1 coincidencia en el título)
+        if (!$fila || (int)$fila['score'] < 10) return null;
+
+        // Cargar ingredientes
+        $s2 = $this->pdo->prepare(
+            "SELECT nombre, cantidad, unidad FROM ingredientes WHERE receta_id = ? ORDER BY orden, id"
+        );
+        $s2->execute([$fila['id']]);
+        $fila['ingredientes'] = $s2->fetchAll();
+
+        // Cargar pasos
+        $s3 = $this->pdo->prepare(
+            "SELECT numero, descripcion FROM pasos WHERE receta_id = ? ORDER BY numero"
+        );
+        $s3->execute([$fila['id']]);
+        $fila['pasos'] = $s3->fetchAll();
+
+        return $fila;
     }
 
-    private function listarTodas(): string {
-        $recetas = $this->recetaModel->listarTodas();
-        if (empty($recetas)) {
-            return "Aún no hay recetas en la base de datos. ¡Los chefs están trabajando en ello! 👨‍🍳";
-        }
-        $resp = "📚 <strong>Recetas disponibles:</strong>\n\n";
-        foreach ($recetas as $r) {
-            $resp .= "• <strong>{$r['titulo']}</strong> — {$r['categoria']} ({$r['tiempo_preparacion']} min)\n";
-        }
-        return $resp;
+    // ─────────────────────────────────────────────────────────────────────────
+    //  EXTRAER INGREDIENTES DEL MENSAJE
+    // ─────────────────────────────────────────────────────────────────────────
+    private function extraerIngredientesDeMensaje(string $mensaje): array
+    {
+        $texto     = mb_strtolower($mensaje);
+        $stopwords = ['tengo','que','para','como','puedo','hacer','con','una','del',
+                      'las','los','hay','quiero','preparar','cocinar','y','o',
+                      'me','de','en','es','no','un','la','le','el','se','al'];
+        $palabras  = preg_split('/[^\p{L}0-9]+/u', $texto, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        return array_values(array_filter(
+            array_unique($palabras),
+            fn($p) => !in_array($p, $stopwords, true) && mb_strlen($p) >= 3
+        ));
     }
 
-    private function porTiempo(string $lower): string {
-        // Extraer número de minutos si lo menciona
-        preg_match('/(\d+)\s*min/', $lower, $matches);
-        $minutos = isset($matches[1]) ? (int)$matches[1] : 30;
-
-        $recetas = $this->recetaModel->porTiempo($minutos);
-        if (empty($recetas)) {
-            return "No encontré recetas de menos de $minutos minutos. 😕 Prueba con un tiempo mayor.";
-        }
-        $resp = "⏱️ <strong>Recetas en menos de $minutos minutos:</strong>\n\n";
-        foreach ($recetas as $r) {
-            $resp .= "• <strong>{$r['titulo']}</strong> — {$r['tiempo_preparacion']} min · {$r['dificultad']}\n";
-        }
-        return $resp;
+    // ─────────────────────────────────────────────────────────────────────────
+    //  BUSCAR POR INGREDIENTES — recetas que contengan los ingredientes dados
+    // ─────────────────────────────────────────────────────────────────────────
+    private function buscarPorIngredientes(array $ingredientes): array
+    {
+        if (empty($ingredientes)) return [];
+        $likes    = array_map(fn($i) => '%' . $i . '%', $ingredientes);
+        $orConds  = implode(' OR ', array_fill(0, count($ingredientes), 'LOWER(i.nombre) LIKE ?'));
+        $stmt = $this->pdo->prepare("
+            SELECT r.id, r.titulo, r.categoria, r.tiempo_preparacion,
+                   r.dificultad, COUNT(DISTINCT i.id) AS coincidencias
+            FROM recetas r
+            JOIN ingredientes i ON i.receta_id = r.id
+            WHERE r.publicada = 1 AND ({$orConds})
+            GROUP BY r.id
+            HAVING coincidencias >= 2
+            ORDER BY coincidencias DESC
+            LIMIT 5
+        ");
+        $stmt->execute($likes);
+        return $stmt->fetchAll();
     }
 
-    private function porDificultad(string $lower): string {
-        if (str_contains($lower, 'fácil') || str_contains($lower, 'facil') ||
-            str_contains($lower, 'sencill') || str_contains($lower, 'principiante')) {
-            $nivel = 'fácil';
-        } elseif (str_contains($lower, 'difícil') || str_contains($lower, 'dificil') ||
-                  str_contains($lower, 'avanzado') || str_contains($lower, 'experto')) {
-            $nivel = 'difícil';
-        } else {
-            $nivel = 'media';
-        }
+    // ─────────────────────────────────────────────────────────────────────────
+    //  BUSCAR PARA RECOMENDACIÓN — categoría, dificultad o tiempo
+    //  Sin respaldo: devuelve [] si no hay filtro concreto
+    // ─────────────────────────────────────────────────────────────────────────
+    private function buscarParaRecomendacion(string $mensaje): array
+    {
+        $t       = mb_strtolower($mensaje);
+        $where   = ['r.publicada = 1'];
+        $params  = [];
+        $filtro  = false;
 
-        $recetas = $this->recetaModel->porDificultad($nivel);
-        if (empty($recetas)) {
-            return "No encontré recetas de dificultad <strong>$nivel</strong>. 😕";
-        }
-        $emoji = $nivel === 'fácil' ? '🟢' : ($nivel === 'media' ? '🟡' : '🔴');
-        $resp  = "$emoji <strong>Recetas de dificultad $nivel:</strong>\n\n";
-        foreach ($recetas as $r) {
-            $resp .= "• <strong>{$r['titulo']}</strong> — {$r['categoria']} ({$r['tiempo_preparacion']} min)\n";
-        }
-        return $resp;
-    }
-
-    private function porCategoria(string $categoria): string {
-        $recetas = $this->recetaModel->porCategoria($categoria);
-        if (empty($recetas)) {
-            return "No encontré recetas de la categoría <strong>$categoria</strong>. 😕\n\nEscribe <em>\"¿qué categorías hay?\"</em> para ver las disponibles.";
-        }
-        $resp = "🌍 <strong>Recetas " . ucfirst($categoria) . ":</strong>\n\n";
-        foreach ($recetas as $r) {
-            $resp .= "• <strong>{$r['titulo']}</strong> — {$r['tiempo_preparacion']} min · {$r['dificultad']}\n";
-        }
-        return $resp;
-    }
-
-    private function porPais(string $paisConsultado): string {
-        $mapa = [
-            'colombiana' => 'Colombia', 'colombia' => 'Colombia',
-            'argentina' => 'Argentina', 'perú' => 'Perú', 'peru' => 'Perú',
-            'españa' => 'España', 'espana' => 'España', 'méxico' => 'México', 'mexico' => 'México',
-            'turquía' => 'Turquía', 'turquia' => 'Turquía', 'japón' => 'Japón', 'japon' => 'Japón',
-            'italia' => 'Italia', 'brasil' => 'Brasil', 'francia' => 'Francia', 'india' => 'India',
-            'vietnam' => 'Vietnam', 'tailandia' => 'Tailandia', 'estados unidos' => 'Estados Unidos',
-        ];
-        $pais = $mapa[$paisConsultado] ?? ucfirst($paisConsultado);
-        $recetas = $this->recetaModel->porPais($pais);
-
-        $tipicos = [
-            'Colombia' => 'La bandeja paisa es uno de los platos más representativos de Colombia. También son muy conocidos el ajiaco y el sancocho.',
-            'Argentina' => 'El asado es uno de los platos más representativos de Argentina. También destacan las empanadas criollas.',
-            'Perú' => 'El ceviche es uno de los platos más representativos de Perú. También destacan el lomo saltado y el ají de gallina.',
-            'México' => 'Los tacos son uno de los platos más representativos de México. También destacan el pozole y los tamales.',
-        ];
-        $respuesta = '🌍 <strong>Gastronomía de ' . htmlspecialchars($pais, ENT_QUOTES, 'UTF-8') . ':</strong>\n\n';
-        $respuesta .= ($tipicos[$pais] ?? 'Su gastronomía tiene platos tradicionales muy variados y llenos de sabor.') . "\n\n";
-
-        if (empty($recetas)) {
-            if ($pais === 'Colombia') {
-                return $respuesta
-                    . '<strong>Bandeja paisa (4 porciones)</strong>\n'
-                    . '<strong>Ingredientes:</strong> frijoles rojos, arroz blanco, carne molida, chicharrón, chorizo, huevo, plátano maduro, aguacate y arepa.\n\n'
-                    . '<strong>Preparación:</strong> cocina los frijoles hasta que estén tiernos; prepara el arroz; dora la carne, el chicharrón y el chorizo; fríe el huevo y el plátano; sirve todo junto con aguacate y arepa.\n\n'
-                    . 'También puedo explicarte paso a paso cualquiera de sus ingredientes o recomendarte otra receta colombiana.';
-            }
-            return $respuesta . 'Todavía no tengo una receta de ese país cargada en el catálogo, pero puedo ayudarte a preparar un plato si me dices cuál te interesa.';
-        }
-
-        $respuesta .= '<strong>Recetas disponibles en GastroDigital:</strong>\n';
-        foreach ($recetas as $receta) {
-            $respuesta .= "• <strong>{$receta['titulo']}</strong> — {$receta['tiempo_preparacion']} min\n";
-        }
-        return $respuesta;
-    }
-
-    private function porIngrediente(string $lower): string {
-        // Extraer el ingrediente: lo que viene después de "tengo", "con", "usando", etc.
-        $ingrediente = $lower;
-        foreach (['tengo', 'con ', 'usando ', 'utilizo ', 'uso '] as $kw) {
-            if (str_contains($lower, $kw)) {
-                $pos = strpos($lower, $kw);
-                $ingrediente = trim(substr($lower, $pos + strlen($kw)));
+        foreach (CATEGORIAS as $cat) {
+            if (mb_strpos($t, mb_strtolower($cat['nombre'])) !== false) {
+                $where[]   = 'r.categoria LIKE ?';
+                $params[]  = '%' . $cat['nombre'] . '%';
+                $filtro    = true;
                 break;
             }
         }
-        // Limpiar palabras comunes
-        $ingrediente = preg_replace('/\b(qué|que|hago|puedo|hacer|receta|recetas|cocinar|preparar)\b/', '', $ingrediente);
-        $ingrediente = trim($ingrediente);
-
-        if (strlen($ingrediente) < 2) {
-            return "¿Con qué ingrediente quieres cocinar? Dime algo como: <em>\"Tengo pollo y arroz\"</em> 🍗";
+        $difs = ['fácil'=>'Fácil','facil'=>'Fácil','media'=>'Media','difícil'=>'Difícil','dificil'=>'Difícil'];
+        foreach ($difs as $key => $val) {
+            if (!$filtro && mb_strpos($t, $key) !== false) {
+                $where[]  = 'r.dificultad = ?';
+                $params[] = $val;
+                $filtro   = true;
+                break;
+            }
+        }
+        if (preg_match('/(\d{1,3})\s*(min|minutos)/u', $t, $m)) {
+            $where[]  = 'r.tiempo_preparacion <= ?';
+            $params[] = (int)$m[1];
+            $filtro   = true;
         }
 
-        $recetas = $this->ingredienteModel->recetasConIngrediente($ingrediente);
-        if (empty($recetas)) {
-            // Intentar búsqueda general con el término
-            $recetas = $this->recetaModel->buscar($ingrediente);
+        if (!$filtro) {
+            // Solo para "populares" / "destacadas"
+            if (mb_strpos($t,'popular')!==false || mb_strpos($t,'destaca')!==false
+             || mb_strpos($t,'vista')!==false) {
+                return $this->recetaModel->masVistas(4);
+            }
+            return [];
         }
 
-        if (empty($recetas)) {
-            return "No encontré recetas con <strong>$ingrediente</strong>. 😕\n\nPrueba con otro ingrediente o escribe el nombre de una receta.";
-        }
+        $whereSQL = 'WHERE ' . implode(' AND ', $where);
+        $stmt = $this->pdo->prepare("
+            SELECT r.id, r.titulo, r.categoria, r.tiempo_preparacion, r.dificultad
+            FROM recetas r {$whereSQL}
+            ORDER BY r.visitas DESC LIMIT 5
+        ");
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 
-        $resp = "🥕 <strong>Recetas con $ingrediente:</strong>\n\n";
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FORMATEADORES — construyen texto directamente desde datos de MySQL
+    // ─────────────────────────────────────────────────────────────────────────
+    private function formatearIngredientes(array $receta): string
+    {
+        if (empty($receta['ingredientes'])) {
+            return "Esta receta no tiene ingredientes registrados en la base de datos.";
+        }
+        $lineas = ["**Ingredientes de \"{$receta['titulo']}\":**"];
+        foreach ($receta['ingredientes'] as $ing) {
+            $cant    = trim(($ing['cantidad'] ?? '') . ' ' . ($ing['unidad'] ?? ''));
+            $lineas[] = '• ' . htmlspecialchars($ing['nombre'])
+                       . ($cant ? ' — ' . htmlspecialchars($cant) : '');
+        }
+        $lineas[] = "\nVer receta: " . BASE_URL . "/recetas?id=" . $receta['id'];
+        return implode("\n", $lineas);
+    }
+
+    private function formatearPasos(array $receta): string
+    {
+        if (empty($receta['pasos'])) {
+            return "Esta receta no tiene pasos registrados en la base de datos.";
+        }
+        $lineas = ["**Preparación de \"{$receta['titulo']}\" "
+                  . "({$receta['tiempo_preparacion']} min · {$receta['dificultad']}):**"];
+        foreach ($receta['pasos'] as $paso) {
+            $lineas[] = $paso['numero'] . '. ' . htmlspecialchars($paso['descripcion']);
+        }
+        $lineas[] = "\nVer receta: " . BASE_URL . "/recetas?id=" . $receta['id'];
+        return implode("\n", $lineas);
+    }
+
+    private function formatearRecetaCompleta(array $receta): string
+    {
+        $lineas = [
+            "**{$receta['titulo']}**",
+            "Categoría: " . htmlspecialchars($receta['categoria'] ?? 'N/D'),
+            "Tiempo: {$receta['tiempo_preparacion']} min | Dificultad: {$receta['dificultad']}"
+              . " | Porciones: " . ($receta['porciones'] ?? 'N/D'),
+        ];
+        if (!empty($receta['calorias'])) {
+            $lineas[] = "Calorías: {$receta['calorias']} kcal por porción";
+        }
+        if (!empty($receta['descripcion'])) {
+            $lineas[] = "\n" . htmlspecialchars($receta['descripcion']);
+        }
+        $lineas[] = "\nVer receta: " . BASE_URL . "/recetas?id=" . $receta['id'];
+        return implode("\n", $lineas);
+    }
+
+    private function formatearListaRecetas(array $recetas): string
+    {
+        $lineas = [];
         foreach ($recetas as $r) {
-            $resp .= "• <strong>{$r['titulo']}</strong> — {$r['categoria']} ({$r['tiempo_preparacion']} min)\n";
+            $lineas[] = sprintf(
+                '• **%s** | %s | %s min | %s | Ver: %s/recetas?id=%d',
+                htmlspecialchars($r['titulo']),
+                htmlspecialchars($r['categoria'] ?? 'Sin categoría'),
+                $r['tiempo_preparacion'] ?? '?',
+                htmlspecialchars($r['dificultad'] ?? ''),
+                BASE_URL, $r['id']
+            );
         }
-        return $resp;
+        return implode("\n", $lineas);
     }
 
-    private function buscarGeneral(string $mensaje): string {
-        $termino = mb_strtolower(trim($mensaje), 'UTF-8');
-        $termino = preg_replace('/\b(cómo|como|preparo|preparar|hago|hacer|puedo|quiero|dame|una|un|la|el|receta|recetas|de|para|cocinar)\b/u', ' ', $termino);
-        $termino = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $termino);
-        $termino = trim(preg_replace('/\s+/', ' ', $termino));
-        $terminoBusqueda = $termino !== '' ? $termino : $mensaje;
-        $recetas = $this->recetaModel->buscar($terminoBusqueda);
-        if (empty($recetas)) {
-            $mensajeSeguro = htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8');
-            return "No encontré resultados para <strong>\"$mensajeSeguro\"</strong>. 🤔\n\n"
-                 . "Intenta con:\n"
-                 . "• El nombre de un plato (ej: <em>\"pasta\"</em>)\n"
-                 . "• Un ingrediente (ej: <em>\"tengo pollo\"</em>)\n"
-                 . "• Una categoría (ej: <em>\"recetas mexicanas\"</em>)\n"
-                 . "• Escribe <em>\"ayuda\"</em> para ver todas las opciones";
-        }
-
-        $terminoSeguro = htmlspecialchars($terminoBusqueda, ENT_QUOTES, 'UTF-8');
-        $resp = "🔍 <strong>Resultados para \"$terminoSeguro\":</strong>\n\n";
-        foreach ($recetas as $r) {
-            $resp .= "• <strong>{$r['titulo']}</strong> — {$r['categoria']} · {$r['tiempo_preparacion']} min · {$r['dificultad']}\n";
-        }
-        return $resp;
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PROMPT DATOS FIJOS — instruye a Ollama a NO modificar los datos de la BD
+    // ─────────────────────────────────────────────────────────────────────────
+    private function promptDatosFijos(string $contextoUsuario, string $datosBD, string $extra): string
+    {
+        return "Eres \"Chef Bot\", el asistente gastronómico de GastroDigital. Responde en español.\n\n"
+             . "REGLAS OBLIGATORIAS:\n"
+             . "1. No inventes ingredientes.\n"
+             . "2. No elimines ingredientes.\n"
+             . "3. No cambies cantidades ni unidades.\n"
+             . "4. No cambies pasos ni su orden.\n"
+             . "5. No cambies el nombre de la receta.\n"
+             . "6. No mezcles información de otras recetas.\n"
+             . "7. " . $extra . "\n"
+             . "8. Sé amable y conciso. Máximo 2 líneas de introducción.\n\n"
+             . "CONTEXTO: " . $contextoUsuario . "\n\n"
+             . "DATOS_BD:\n" . $datosBD . "\nFIN_DATOS_BD\n\nAsistente:";
     }
 
-    // ── Utilidades ────────────────────────────────────────────────────────────
-
-    private function coincide(string $texto, array $palabras): bool {
-        foreach ($palabras as $p) {
-            if (str_contains($texto, $p)) return true;
-        }
-        return false;
+    // ─────────────────────────────────────────────────────────────────────────
+    //  RESPUESTA NO ENCONTRADA
+    // ─────────────────────────────────────────────────────────────────────────
+    private function respuestaNoEncontrada(string $mensaje): string
+    {
+        $terminos = $this->extraerIngredientesDeMensaje($mensaje);
+        $buscado  = !empty($terminos)
+            ? '"' . implode(', ', array_slice($terminos, 0, 3)) . '"'
+            : 'lo que buscas';
+        return "No encontré una receta de {$buscado} en GastroDigital. "
+             . "Nuestro catálogo puede no tener esa receta todavía.\n"
+             . "Puedes explorar todas las recetas aquí: " . BASE_URL . "/recetas";
     }
 
-    private function esGastronomico(string $texto): bool {
-        if ($this->coincide($texto, $this->temasNoGastronomicos)) {
-            return false;
+    // ─────────────────────────────────────────────────────────────────────────
+    //  LLAMAR A OLLAMA — firma nueva: recibe el prompt ya construido
+    // ─────────────────────────────────────────────────────────────────────────
+    private function llamarOllama(string $prompt, array $historial = []): ?string
+    {
+        if (!function_exists('curl_init')) {
+            error_log('ChatbotController: cURL no está disponible.');
+            return null;
         }
 
-        if ($this->coincide($texto, $this->intenciones['saludo']) ||
-            $this->coincide($texto, $this->intenciones['despedida']) ||
-            $this->coincide($texto, $this->intenciones['ayuda'])) {
-            return true;
+        // Adjuntar los últimos 3 turnos de historial como contexto
+        $conv = '';
+        foreach (array_slice($historial, -6) as $turno) {
+            $conv .= $turno['role'] === 'user'
+                ? "\nUsuario: " . ($turno['content'] ?? '')
+                : "\nAsistente: " . ($turno['content'] ?? '');
+        }
+        $promptFinal = $conv ? $prompt . "\n[Historial previo:]{$conv}\n\nAsistente:" : $prompt;
+
+        $payload = json_encode([
+            'model'   => OLLAMA_MODEL,
+            'prompt'  => $promptFinal,
+            'stream'  => false,
+            'options' => [
+                'temperature'    => 0.3,   // bajo: respuestas fieles a los datos
+                'num_predict'    => 350,
+                'top_p'          => 0.85,
+                'repeat_penalty' => 1.2,
+            ],
+        ]);
+
+        $ch = curl_init(OLLAMA_URL);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT        => OLLAMA_TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => 5,
+        ]);
+
+        $raw  = curl_exec($ch);
+        $err  = curl_error($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($raw === false || $err !== '') {
+            error_log("Chef Bot — cURL error: {$err}");
+            return null;
+        }
+        if ($code !== 200) {
+            error_log("Chef Bot — HTTP {$code}: {$raw}");
+            return null;
         }
 
-        return $this->coincide($texto, $this->temasGastronomicos);
+        $texto = trim(json_decode($raw, true)['response'] ?? '');
+        return $texto !== '' ? $texto : null;
     }
+}
+
+// ── Punto de entrada cuando el archivo se llama directamente ─────────────────
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    header('Content-Type: application/json; charset=utf-8');
+    $controller = new ChatbotController();
+    $accion = $_GET['accion'] ?? 'responder';
+    match ($accion) {
+        'token'  => $controller->token(),
+        default  => $controller->responder(),
+    };
 }

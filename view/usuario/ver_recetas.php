@@ -400,7 +400,7 @@ if (isLoggedIn()) {
       <div class="modal-body">
         <form id="formReporteReceta">
           <input type="hidden" name="tipo" value="receta">
-          <input type="hidden" name="objetivo_id" value="<?= (int)$receta['id'] ?>">
+          <input type="hidden" name="objetivo_id" value="<?= (int)($receta['id'] ?? 0) ?>">
           <div class="mb-3">
             <label class="form-label">Motivo</label>
             <select class="form-select" name="motivo" required>
@@ -432,7 +432,7 @@ if (isLoggedIn()) {
       </div>
       <div class="modal-body">
         <form id="formValorarChef">
-          <input type="hidden" name="chef_id" value="<?= (int)$receta['chef_id'] ?>">
+          <input type="hidden" name="chef_id" value="<?= (int)($receta['chef_id'] ?? 0) ?>">
           <div class="mb-3">
             <label class="form-label">Puntuación</label>
             <select class="form-select" name="puntuacion">
@@ -550,7 +550,7 @@ if (btnSeguirChef) {
     fetch('<?= BASE_URL ?>/controllers/RecetaController.php?accion=seguirChef', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'chef_id=<?= (int)$receta['chef_id'] ?>&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
+      body: 'chef_id=<?= (int)($receta['chef_id'] ?? 0) ?>&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
     }).then(r => r.json()).then(() => location.reload());
   });
 }

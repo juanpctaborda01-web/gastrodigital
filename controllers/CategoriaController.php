@@ -2,42 +2,46 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../models/categoria.php';
 
-requireRole(ROL_ADMIN);
+class CategoriaController
+{
+    private Categoria $model;
 
-$model  = new Categoria();
-$accion = $_POST['accion'] ?? '';
+    public function __construct()
+    {
+        $this->model = new Categoria();
+    }
 
-// Verificar CSRF en todas las acciones
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verificarCsrf();
-}
+    public function crear(): void
+    {
+        requireRole(ROL_ADMIN);
+        verificarCsrf();
 
-switch ($accion) {
-
-    case 'crear':
         $nombre = trim($_POST['nombre'] ?? '');
         $icono  = trim($_POST['icono']  ?? 'bi-egg-fried');
         $color  = trim($_POST['color']  ?? '#c0392b');
         $bg     = trim($_POST['bg']     ?? '#f7ede0');
 
         if ($nombre) {
-            $model->crear($nombre, $icono, $color, $bg);
+            $this->model->crear($nombre, $icono, $color, $bg);
             $_SESSION['exito'] = "Categoría \"$nombre\" creada.";
         } else {
             $_SESSION['error'] = 'El nombre es obligatorio.';
         }
-        break;
+        redirect('admin/categorias');
+    }
 
-    case 'eliminar':
+    public function eliminar(): void
+    {
+        requireRole(ROL_ADMIN);
+        verificarCsrf();
+
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
-            $model->eliminar($id);
+            $this->model->eliminar($id);
             $_SESSION['exito'] = 'Categoría eliminada.';
+        } else {
+            $_SESSION['error'] = 'ID inválido.';
         }
-        break;
-
-    default:
-        $_SESSION['error'] = 'Acción no válida.';
+        redirect('admin/categorias');
+    }
 }
-
-redirect('view/admin/categorias.php');
