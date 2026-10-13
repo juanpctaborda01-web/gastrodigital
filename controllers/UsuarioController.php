@@ -46,7 +46,8 @@ switch ($accion) {
         }
 
         if ($model->actualizarPerfil($id, $nombre, $avatar, $bio, $redesSociales, $especialidad)) {
-            $_SESSION['usuario_nombre'] = $nombre;
+            $_SESSION['usuario_nombre']  = $nombre;
+            $_SESSION['usuario_avatar']  = $avatar;   // ← actualizar sesión para el sidebar
             $_SESSION['exito'] = 'Perfil actualizado correctamente.';
         } else {
             $_SESSION['error'] = 'No se pudo guardar el perfil.';
@@ -86,6 +87,42 @@ switch ($accion) {
             $_SESSION['error'] = 'No puedes eliminarte a ti mismo.';
         }
         redirect('admin/usuarios');
+        break;
+
+    // Cambiar contraseña de cualquier usuario (solo admin)
+    case 'cambiarPassword':
+        requireRole(ROL_ADMIN);
+        $id          = (int)($_POST['usuario_id'] ?? 0);
+        $nueva       = $_POST['nueva_password']    ?? '';
+        $confirmacion = $_POST['confirmar_password'] ?? '';
+
+        if (!$id) {
+            $_SESSION['error'] = 'Usuario no válido.';
+            redirect('index.php?route=admin/cambiar-contrasenas');
+        }
+        if (strlen($nueva) < 8) {
+            $_SESSION['error'] = 'La contraseña debe tener al menos 8 caracteres.';
+            redirect('index.php?route=admin/cambiar-contrasenas&id=' . $id);
+        }
+        if ($nueva !== $confirmacion) {
+            $_SESSION['error'] = 'Las contraseñas no coinciden.';
+            redirect('index.php?route=admin/cambiar-contrasenas&id=' . $id);
+        }
+
+        $hash = password_hash($nueva, PASSWORD_BCRYPT);
+        try {
+            $pdo = Conexion::getInstancia()->getPDO();
+            $pdo->prepare("UPDATE usuarios SET password = ? WHERE id_usuario = ?")
+                ->execute([$hash, $id]);
+            $usr = $pdo->prepare("SELECT nombre FROM usuarios WHERE id_usuario = ?");
+            $usr->execute([$id]);
+            $nombreUsr = $usr->fetchColumn() ?: "ID $id";
+            $_SESSION['exito'] = "✅ Contraseña de «$nombreUsr» actualizada correctamente.";
+        } catch (Throwable $e) {
+            error_log('[cambiarPassword] ' . $e->getMessage());
+            $_SESSION['error'] = 'Error al actualizar la contraseña: ' . $e->getMessage();
+        }
+        redirect('index.php?route=admin/cambiar-contrasenas&id=' . $id);
         break;
 
     default:

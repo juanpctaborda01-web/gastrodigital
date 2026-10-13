@@ -15,6 +15,17 @@
   --cream-2:    #f5ede0;
   --cream-3:    #ecdcc8;
 
+  /* Alias para componentes */
+  --primary:    #d35400;
+  --secondary:  #e8a838;
+  --accent:     #c0392b;
+  --surface:    #fdf8f2;
+  --surface-2:  #f5ede0;
+  --surface-3:  #ecdcc8;
+  --gold-glow:  rgba(232,168,56,.22);
+  --panel-head: linear-gradient(135deg, #2e1a0a 0%, #4a2410 50%, #3b2a1a 100%);
+  --panel-head-light: linear-gradient(135deg, #fff8f0 0%, #fdf0e0 100%);
+
   /* Sidebar oscuro */
   --sb-bg:      #0f0c08;
   --sb-bg2:     #161009;
@@ -24,6 +35,7 @@
   --sb-hover:   rgba(255,255,255,.06);
   --sb-active:  rgba(255,255,255,.10);
   --sb-w:       240px;
+  --sb-w-collapsed: 64px;
 
   /* Topbar */
   --tb-h:       58px;
@@ -65,8 +77,7 @@ body.auth-page   { padding-left: 0; }
    3. SIDEBAR — Premium oscuro con colapso desktop y tooltips
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ─── Ancho colapsado ─── */
-:root { --sb-w-collapsed: 64px; }
+/* ─── Ancho colapsado — definido en :root principal ─── */
 
 /* Colapso en desktop */
 body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
@@ -274,6 +285,49 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
 .sb-pill { margin-left: auto; flex-shrink: 0; padding: .12rem .5rem; border-radius: 20px; font-size: .58rem; font-weight: 800; text-transform: uppercase; }
 .sb-pill--ia    { background: rgba(155,89,182,.22); color: #b899cc; }
 .sb-pill--crear { background: rgba(46,204,113,.18); color: #2ecc71; }
+.sb-pill--notification { background: rgba(192,57,43,.16); color: #c0392b; }
+
+/* ── Saludo rápido del sidebar ── */
+.sb-greeting {
+  padding: .55rem 1rem .1rem;
+  font-size: .75rem;
+  color: rgba(255,255,255,.38);
+}
+.sb-greeting-text strong { color: rgba(255,255,255,.72); font-weight: 700; }
+
+/* ── Buscador inline del sidebar ── */
+.sb-search-wrap {
+  padding: .5rem .85rem .55rem;
+  flex-shrink: 0;
+}
+.sb-search {
+  display: flex; align-items: center; gap: .5rem;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 9px;
+  padding: .38rem .75rem;
+  transition: border-color .18s, background .18s;
+}
+.sb-search:focus-within {
+  background: rgba(255,255,255,.09);
+  border-color: rgba(232,168,56,.4);
+}
+.sb-search-ico { color: rgba(255,255,255,.28); font-size: .82rem; flex-shrink: 0; }
+.sb-search-input {
+  background: transparent; border: none; outline: none;
+  color: rgba(255,255,255,.75); font-size: .78rem;
+  font-family: 'Nunito', sans-serif; width: 100%;
+}
+.sb-search-input::placeholder { color: rgba(255,255,255,.28); }
+
+/* ── Backlink del page_header ── */
+.gd-ph-back {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .78rem; color: rgba(255,255,255,.45);
+  text-decoration: none; margin-bottom: .45rem;
+  transition: color .15s;
+}
+.gd-ph-back:hover { color: rgba(255,255,255,.8); }
 
 /* Toggle switch modo oscuro */
 .sb-switch { position: relative; display: inline-block; width: 34px; height: 18px; margin-left: auto; flex-shrink: 0; }
@@ -421,6 +475,63 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
 }
 .gd-topbar-site-name strong{font-weight:800}
 
+.gd-context-help {
+  position: fixed;
+  z-index: 9995;
+  left: calc(var(--sb-w) + 1rem);
+  bottom: 1.25rem;
+  font-family: inherit;
+}
+.gd-context-help summary {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  min-height: 40px;
+  padding: .35rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--cream);
+  color: var(--text);
+  box-shadow: var(--sh);
+  cursor: pointer;
+  list-style: none;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.gd-context-help summary::-webkit-details-marker { display: none; }
+.gd-context-help summary img { width: 25px; height: 25px; object-fit: contain; }
+.gd-context-help summary:focus-visible { outline: 3px solid #e56a26; outline-offset: 3px; }
+.gd-context-help-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + .65rem);
+  width: min(300px, calc(100vw - 2rem));
+  padding: .9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r, 12px);
+  background: var(--cream);
+  color: var(--text);
+  box-shadow: var(--sh);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+.gd-context-help-panel strong { display: block; margin-bottom: .25rem; }
+.gd-context-help-panel p { margin: 0; }
+body.sb-is-collapsed .gd-context-help { left: calc(var(--sb-w-collapsed) + 1rem); }
+body.auth-page .gd-context-help { left: 1rem; }
+@media (max-width: 1023px) {
+  .gd-context-help, body.sb-is-collapsed .gd-context-help { left: 1rem; }
+}
+@media (max-width: 767px) {
+  .gd-context-help, body.sb-is-collapsed .gd-context-help, body.auth-page .gd-context-help {
+    left: 1rem;
+    bottom: 1rem;
+  }
+  .gd-context-help summary span { display: none; }
+  .gd-context-help summary { width: 44px; height: 44px; justify-content: center; padding: .25rem; }
+  .gd-context-help summary img { width: 29px; height: 29px; }
+}
+
 .gd-topbar-badge{
   padding:.22rem .75rem;border-radius:20px;
   font-size:.72rem;font-weight:700;
@@ -465,6 +576,7 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
   background:transparent;color:var(--text-m);font-size:1.1rem;
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:all var(--tr);
+  text-decoration:none;
 }
 .gd-topbar-bell:hover{background:var(--cream-2);color:var(--orange)}
 
@@ -486,7 +598,9 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
   background:linear-gradient(135deg,var(--gold),var(--orange));
   color:#fff;font-weight:800;font-size:.82rem;
   display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
 }
+.gd-topbar-av img{width:100%;height:100%;object-fit:cover}
 .gd-topbar-user-info{line-height:1.25}
 .gd-topbar-user-name{font-size:.8rem;font-weight:700;color:var(--text)}
 .gd-topbar-user-role{font-size:.68rem;color:var(--text-m)}
@@ -638,22 +752,22 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
   font-size:.72rem;color:var(--text-m);margin-top:.25rem;
 }
 
-/* Stat-card coloreado (viejo, mantener compatibilidad) */
-.stat-card{
+/* Stat-card coloreado — usado en mis_recetas.php y dashboards con gradiente */
+.stat-card-colored{
   border-radius:var(--r);padding:1.4rem;color:#fff;
   position:relative;overflow:hidden;
   box-shadow:0 6px 20px rgba(0,0,0,.15);
   transition:transform var(--tr);
 }
-.stat-card:hover{transform:translateY(-3px)}
-.stat-card::after{
+.stat-card-colored:hover{transform:translateY(-3px)}
+.stat-card-colored::after{
   content:'';position:absolute;right:-10px;top:-10px;
   width:80px;height:80px;border-radius:50%;
   background:rgba(255,255,255,.08);
 }
-.stat-card .stat-icon  {font-size:2.2rem;opacity:.8}
-.stat-card .stat-number{font-size:1.9rem;font-weight:800;line-height:1}
-.stat-card .stat-label {font-size:.8rem;opacity:.8;font-weight:600}
+.stat-card-colored .stat-icon  {font-size:2.2rem;opacity:.8}
+.stat-card-colored .stat-number{font-size:1.9rem;font-weight:800;line-height:1}
+.stat-card-colored .stat-label {font-size:.8rem;opacity:.8;font-weight:600}
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -703,29 +817,60 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
 .hero-stat-divider{width:1px;height:36px;background:rgba(255,255,255,.12)}
 
 /* Tarjetas flotantes */
-.hero-cards-stack{position:relative;width:380px;height:380px}
+.hero-cards-stack{position:relative;width:400px;height:400px}
 .hero-circle-bg{
-  position:absolute;width:280px;height:280px;border-radius:50%;
-  background:rgba(232,168,56,.06);border:1px solid rgba(232,168,56,.14);
+  position:absolute;width:290px;height:290px;border-radius:50%;
+  background:radial-gradient(circle, rgba(232,168,56,.12) 0%, rgba(232,168,56,.04) 60%, transparent 100%);
+  border:1px solid rgba(232,168,56,.18);
   top:50%;left:50%;transform:translate(-50%,-50%);
+}
+/* Segunda corona decorativa */
+.hero-circle-bg::after{
+  content:'';position:absolute;inset:-28px;border-radius:50%;
+  border:1px dashed rgba(232,168,56,.1);
 }
 .hero-float-card{
   position:absolute;
-  background:rgba(255,255,255,.1);backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.16);border-radius:16px;
-  padding:1rem 1.25rem;color:#fff;
-  display:flex;flex-direction:column;gap:.22rem;
-  box-shadow:0 8px 28px rgba(0,0,0,.25);min-width:158px;
+  background:rgba(255,255,255,.11);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;
+  padding:1.2rem 1.5rem 1.1rem;
+  color:#fff;
+  display:flex;flex-direction:column;gap:.3rem;
+  box-shadow:0 8px 32px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.14);
+  min-width:168px;max-width:210px;
+  cursor:pointer;
+  transition:transform .3s ease, box-shadow .3s ease, background .3s ease;
+  text-decoration:none;
 }
-.hero-float-card i    {font-size:1.6rem;color:var(--gold);margin-bottom:.15rem}
-.hero-float-card span {font-weight:700;font-size:.86rem}
-.hero-float-card small{color:rgba(255,255,255,.52);font-size:.71rem}
-.hero-float-card.card-1{top:18px;left:8px;  animation:flt1 4s   ease-in-out infinite}
-.hero-float-card.card-2{top:115px;right:0;  animation:flt2 4.8s ease-in-out infinite}
-.hero-float-card.card-3{bottom:28px;left:55px;animation:flt3 5.4s ease-in-out infinite}
-@keyframes flt1{0%,100%{transform:translateY(0)} 50%{transform:translateY(-13px)}}
-@keyframes flt2{0%,100%{transform:translateY(-4px)} 50%{transform:translateY(-17px)}}
-@keyframes flt3{0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)}}
+.hero-float-card:hover{
+  background:rgba(255,255,255,.18);
+  box-shadow:0 14px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  transform:translateY(-6px) scale(1.03) !important;
+}
+/* Icono PNG de categoría */
+.hero-card-icon-img{
+  width:36px;height:36px;object-fit:contain;
+  filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(5deg);
+  margin-bottom:.1rem;
+}
+/* Icono Bootstrap fallback */
+.hero-float-card > i { font-size:1.8rem; color:var(--gold); margin-bottom:.1rem; }
+/* Título de la receta */
+.hero-float-card span{font-weight:800;font-size:.92rem;line-height:1.25;color:#fff}
+/* Subtítulo tiempo + categoría */
+.hero-float-card small{
+  color:rgba(255,255,255,.58);font-size:.72rem;
+  display:flex;align-items:center;gap:3px;margin-top:.1rem;
+}
+/* Posiciones y animaciones */
+.hero-float-card.card-1{top:14px;left:4px;  animation:flt1 4s   ease-in-out infinite}
+.hero-float-card.card-2{top:110px;right:-4px;animation:flt2 4.8s ease-in-out infinite}
+.hero-float-card.card-3{bottom:22px;left:50px;animation:flt3 5.4s ease-in-out infinite}
+@keyframes flt1{0%,100%{transform:translateY(0)}    50%{transform:translateY(-14px)}}
+@keyframes flt2{0%,100%{transform:translateY(-5px)} 50%{transform:translateY(-19px)}}
+@keyframes flt3{0%,100%{transform:translateY(0)}    50%{transform:translateY(-11px)}}
 
 .hero-wave{position:absolute;bottom:-1px;left:0;right:0;line-height:0}
 .hero-wave svg{width:100%;height:75px;display:block}
@@ -1412,4 +1557,419 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
     .receta-img-placeholder {
         height: 180px;
     }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   18. MEJORAS GLOBALES UI — paneles, tablas, títulos, topbar
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Variables adicionales — movidas al :root principal (sección 1) ── */
+
+/* ── Panel card mejorado con encabezado cálido ── */
+.panel-card {
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: 0 4px 20px rgba(60,30,10,.1);
+  background: #fff;
+  overflow: hidden;
+}
+.panel-card > .card-header,
+.panel-card > .table-responsive + .card-header {
+  background: var(--panel-head-light);
+  border-bottom: 2px solid var(--cream-3);
+  padding: 1rem 1.35rem;
+  font-weight: 800;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.panel-card > .card-header i {
+  color: var(--orange);
+  font-size: 1.1rem;
+}
+
+/* Panel oscuro — para dashboards / secciones destacadas */
+.panel-card.panel-dark {
+  background: linear-gradient(145deg, #2e1a0a, #4a2410);
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,.28);
+}
+.panel-card.panel-dark .card-header {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.1);
+  color: var(--cream);
+}
+
+/* Panel con borde izquierdo de acento */
+.panel-accent {
+  border-left: 4px solid var(--gold) !important;
+}
+.panel-accent-red {
+  border-left: 4px solid var(--red) !important;
+}
+
+/* ── Sección genérica con fondo degradado suave ── */
+.section-warm {
+  background: linear-gradient(180deg, #fff8f2 0%, #fdf8f2 100%);
+  border-top: 1px solid var(--cream-3);
+  border-bottom: 1px solid var(--cream-3);
+}
+
+/* ── Títulos de sección mejorados ── */
+.section-heading {
+  position: relative;
+  display: inline-block;
+  font-size: clamp(1.3rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -.02em;
+  margin-bottom: .25rem;
+}
+.section-heading::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 40%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--orange), transparent);
+  border-radius: 2px;
+}
+/* Variante centrada */
+.section-heading.centered::after {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+}
+
+/* Subtítulo de sección */
+.section-sub {
+  color: var(--text-m);
+  font-size: .93rem;
+  max-width: 520px;
+}
+.section-sub.centered { margin: 0 auto; text-align: center; }
+
+/* Etiqueta de sección (ya existía, la reforzamos) */
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  background: linear-gradient(135deg, rgba(232,168,56,.15), rgba(211,84,0,.1));
+  color: var(--orange);
+  border: 1px solid rgba(232,168,56,.3);
+  padding: .3rem .9rem;
+  border-radius: 20px;
+  font-size: .74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-bottom: .55rem;
+}
+
+/* ── Tablas mejoradas ── */
+
+/* Encabezado cálido (naranja-mostaza) */
+.table > thead.thead-warm th,
+.table-warm > thead th {
+  background: linear-gradient(135deg, var(--dark), #4a2410) !important;
+  color: #fff !important;
+  font-weight: 700;
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  border: none !important;
+  padding: .9rem 1rem;
+  white-space: nowrap;
+}
+/* Encabezado dorado */
+.table-gold > thead th {
+  background: linear-gradient(135deg, var(--gold-d), var(--gold)) !important;
+  color: var(--dark) !important;
+  font-weight: 800;
+  font-size: .77rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  border: none !important;
+  padding: .9rem 1rem;
+}
+
+/* Filas con hover cálido */
+.table > tbody tr {
+  transition: background .15s, transform .15s;
+}
+.table > tbody tr:hover {
+  background: rgba(232,168,56,.07) !important;
+}
+/* Celda con click highlight */
+.table > tbody tr:active {
+  background: rgba(232,168,56,.14) !important;
+}
+
+/* Bordes suaves entre filas */
+.table > tbody tr > td {
+  border-color: var(--cream-2) !important;
+  vertical-align: middle;
+  padding: .75rem 1rem;
+  font-size: .88rem;
+}
+/* Border-radius en la tabla envuelta en panel */
+.panel-card .table-responsive { border-radius: var(--r-lg); }
+.panel-card .table > thead th:first-child { border-radius: var(--r) 0 0 0; }
+.panel-card .table > thead th:last-child  { border-radius: 0 var(--r) 0 0; }
+
+/* Tabla compacta */
+.table-sm > tbody tr > td { padding: .5rem .85rem; }
+
+/* ── Topbar mejorada ── */
+.gd-topbar {
+  background: linear-gradient(90deg, #fff 0%, #fffaf5 100%);
+  border-bottom: 1.5px solid var(--cream-3);
+  box-shadow: 0 2px 12px rgba(60,30,10,.07);
+}
+
+/* ── Dashboard shell mejoras ── */
+.dashboard-hero {
+  background: linear-gradient(135deg, #1c1008 0%, #3b1a06 45%, #2a1408 100%) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,.28);
+}
+.dashboard-hero::after {
+  background: radial-gradient(circle at 82% 50%, rgba(232,168,56,.15) 0%, transparent 55%) !important;
+}
+
+/* Stat card en dashboard */
+.stat-card {
+  background: #fff;
+  border-radius: var(--r);
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 3px 14px rgba(60,30,10,.08);
+  border-left: 4px solid var(--gold);
+  transition: transform .2s, box-shadow .2s;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(60,30,10,.14);
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -20px; right: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--gold-glow);
+}
+.stat-card-num {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1;
+  margin-bottom: .2rem;
+}
+.stat-card-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--text-m);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.stat-card-icon {
+  font-size: 1.8rem;
+  color: var(--gold);
+  opacity: .7;
+}
+/* Variantes de color para stat-card */
+.stat-card.stat-orange { border-left-color: var(--orange); }
+.stat-card.stat-orange .stat-card-num { color: var(--orange); }
+.stat-card.stat-red    { border-left-color: var(--red); }
+.stat-card.stat-red    .stat-card-num { color: var(--red); }
+.stat-card.stat-green  { border-left-color: #2ecc71; }
+.stat-card.stat-green  .stat-card-num { color: #1a8a44; }
+
+/* ── Botones de acción en tablas/listados ── */
+.btn-accion {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .3rem .75rem;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all .18s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-accion-ver    { background: rgba(52,152,219,.12); color: #2980b9; }
+.btn-accion-ver:hover { background: #3498db; color: #fff; }
+.btn-accion-editar { background: rgba(232,168,56,.15); color: var(--gold-d); }
+.btn-accion-editar:hover { background: var(--gold); color: var(--dark); }
+.btn-accion-eliminar { background: rgba(192,57,43,.1); color: var(--red); }
+.btn-accion-eliminar:hover { background: var(--red); color: #fff; }
+
+/* ── Breadcrumb mejorado ── */
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--text-m);
+}
+.breadcrumb-item.active { color: var(--orange); font-weight: 700; }
+
+/* ── Badges de estado ── */
+.badge-publicada   { background: #d4edda; color: #1a7a38; font-weight: 700; }
+.badge-borrador    { background: var(--cream-3); color: var(--text-m); font-weight: 700; }
+.badge-destacada-2 { background: linear-gradient(135deg,var(--gold),var(--orange)); color:#fff; font-weight: 700; }
+
+/* ── Animaciones de entrada para tablas ── */
+@keyframes slideInRow {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* Solo aplica a filas de tabla, no a .card */
+.table > tbody > tr {
+  animation: slideInRow .3s ease backwards;
+}
+.table > tbody > tr:nth-child(1) { animation-delay: .03s; }
+.table > tbody > tr:nth-child(2) { animation-delay: .06s; }
+.table > tbody > tr:nth-child(3) { animation-delay: .09s; }
+.table > tbody > tr:nth-child(4) { animation-delay: .12s; }
+.table > tbody > tr:nth-child(5) { animation-delay: .15s; }
+.table > tbody > tr:nth-child(n+6) { animation-delay: .18s; }
+
+/* Asegurar que las cards de receta NO hereden animación de tabla */
+.receta-card { animation: fadeInUp .35s ease backwards !important; }
+.col-sm-6.col-lg-4:nth-child(1) .receta-card { animation-delay: .05s; }
+.col-sm-6.col-lg-4:nth-child(2) .receta-card { animation-delay: .1s;  }
+.col-sm-6.col-lg-4:nth-child(3) .receta-card { animation-delay: .15s; }
+.col-sm-6.col-lg-4:nth-child(n+4) .receta-card { animation-delay: .2s; }
+
+/* ── Responsive fix ── */
+@media (max-width: 768px) {
+  .section-heading { font-size: 1.25rem; }
+  .stat-card-num   { font-size: 1.5rem; }
+  .panel-card > .card-header { font-size: .9rem; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   19. HERO UNIFICADO PARA SECCIONES (categorías, países, favoritos, etc.)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Hero base — fondo oscuro cálido, igual al de países */
+.gd-section-hero {
+  background: linear-gradient(135deg, #1c1008 0%, #3b1a06 45%, #2a1408 100%);
+  border-radius: var(--r-lg);
+  padding: 2.2rem 2rem 2rem;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.22);
+}
+.gd-section-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 80% 50%, rgba(232,168,56,.14) 0%, transparent 60%);
+  pointer-events: none;
+}
+/* Puntos decorativos en el fondo */
+.gd-section-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 22px 22px;
+  pointer-events: none;
+}
+
+/* Texto interior */
+.gd-section-hero-body { position: relative; z-index: 1; }
+
+/* Chip/etiqueta superior */
+.gd-section-hero .section-tag {
+  background: rgba(232,168,56,.18);
+  border-color: rgba(232,168,56,.35);
+  color: #f5cc6e;
+  margin-bottom: .55rem;
+}
+
+/* Título principal */
+.gd-section-hero-title {
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 .35rem;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+}
+/* Línea decorativa bajo el título */
+.gd-section-hero-title::after {
+  content: '';
+  display: block;
+  width: 52px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--orange), transparent);
+  border-radius: 2px;
+  margin-top: .45rem;
+}
+
+/* Subtítulo */
+.gd-section-hero-sub {
+  color: rgba(255,255,255,.52);
+  font-size: .9rem;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Arte lateral (icono decorativo) */
+.gd-section-hero-art {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  opacity: .22;
+  filter: brightness(4) drop-shadow(0 4px 12px rgba(232,168,56,.3));
+}
+.gd-section-hero-art img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  display: block;
+}
+
+/* ── section-title global mejorado (para index_home y otras páginas) ── */
+.section-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: .5rem;
+  letter-spacing: -.015em;
+  position: relative;
+  display: inline-block;
+}
+/* Línea dorada bajo el título de sección */
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 44px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--orange), transparent);
+  border-radius: 2px;
+}
+/* Variante centrada */
+.section-title.centered::after,
+.text-center .section-title::after {
+  left: 50%;
+  transform: translateX(-50%);
 }

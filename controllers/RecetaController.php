@@ -6,7 +6,7 @@ require_once __DIR__ . '/../models/categoria.php';
 $accion = $_GET['accion'] ?? $_POST['accion'] ?? '';
 
 // ── Acciones JSON (AJAX) ──────────────────────────────────────────────────────
-$jsonAcciones = ['favorito', 'valorar', 'comentar', 'seguirChef', 'valorarChef', 'reportar', 'eliminar'];
+$jsonAcciones = ['favorito', 'valorar', 'comentar', 'seguirChef', 'valorarChef', 'reportar', 'togglePublicada'];
 
 if (in_array($accion, $jsonAcciones)) {
     header('Content-Type: application/json; charset=utf-8');
@@ -76,15 +76,36 @@ if (in_array($accion, $jsonAcciones)) {
             echo json_encode($model->reportar($userId, $tipo, $objetivoId, $motivo, $descripcion));
             break;
 
-        case 'eliminar':
+        case 'togglePublicada':
+            requireRole(ROL_CHEF);
             $recetaId = (int)($_POST['receta_id'] ?? 0);
-            echo json_encode($model->eliminar($recetaId, $userId, $rol));
+            if (!$recetaId) { echo json_encode(['error' => 'ID inválido']); exit(); }
+            echo json_encode($model->togglePublicada($recetaId, $userId));
             break;
 
         default:
             echo json_encode(['error' => 'Acción desconocida']);
     }
     exit();
+}
+
+// ── Acción: eliminar receta (POST desde formulario — redirige tras eliminar) ─
+if ($accion === 'eliminar') {
+    requireLogin();
+    verificarCsrf();
+    $recetaId = (int)($_POST['receta_id'] ?? 0);
+    $userId   = $_SESSION['usuario_id'];
+    $rol      = $_SESSION['rol'];
+    $model    = new Receta();
+    if ($recetaId) {
+        $res = $model->eliminar($recetaId, $userId, $rol);
+        if (isset($res['exito'])) {
+            $_SESSION['exito'] = 'Receta eliminada correctamente.';
+        } else {
+            $_SESSION['error'] = $res['error'] ?? 'No se pudo eliminar la receta.';
+        }
+    }
+    redirect('mis-recetas');
 }
 
 // ── Acción: crear receta (POST desde formulario) ──────────────────────────────
@@ -124,6 +145,7 @@ if ($accion === 'crear') {
         'categoria'   => $cat,
         'imagen'      => $imagen,
         'calorias'    => $_POST['calorias'] ? (int)$_POST['calorias'] : null,
+        'publicada'   => isset($_POST['publicada']) ? (int)(bool)$_POST['publicada'] : 1,
     ], $_SESSION['usuario_id']);
 
     $ingredientes = [];
@@ -139,7 +161,9 @@ if ($accion === 'crear') {
     $model->guardarIngredientes($recetaId, $ingredientes);
     $model->guardarPasos($recetaId, $_POST['pasos'] ?? []);
 
-    $_SESSION['exito'] = "Receta \"$titulo\" publicada correctamente.";
+    $_SESSION['exito'] = isset($_POST['publicada']) && !$_POST['publicada']
+        ? "Receta \"$titulo\" guardada como borrador."
+        : "Receta \"$titulo\" publicada correctamente.";
     redirect('mis-recetas');
 }
 
@@ -195,6 +219,7 @@ if ($accion === 'editar') {
         'calorias'    => $_POST['calorias'] ? (int)$_POST['calorias'] : null,
         'imagen'      => $imagen,
         'chef_id'     => $userId,
+        'publicada'   => isset($_POST['publicada']) ? (int)(bool)$_POST['publicada'] : null,
     ]);
 
     $ingredientes = [];

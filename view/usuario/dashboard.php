@@ -16,6 +16,7 @@ $rol       = $_SESSION['rol'] ?? 'usuario';
 $perfil    = $userModel->buscarPorId($userId) ?: [];
 $perfilNombre = $perfil['nombre'] ?? $nombre;
 $perfilAvatar = $perfil['avatar'] ?? '';
+$perfilAvatarUrl = urlAvatarPerfil($perfilAvatar);
 
 // Estadísticas dinámicas
 $totalFavoritos     = $model->contarFavoritosUsuario($userId);
@@ -72,6 +73,12 @@ include __DIR__ . '/../../assets/topbar.php';
             GastroDigital Community
           </div>
           <h1 class="gd-dash-hero-title">
+            <?php if ($perfilAvatarUrl): ?>
+              <img src="<?= htmlspecialchars($perfilAvatarUrl) ?>"
+                   alt="Avatar de <?= htmlspecialchars($perfilNombre) ?>"
+                   class="rounded-circle me-2"
+                   style="width:48px;height:48px;object-fit:cover;vertical-align:middle">
+            <?php endif; ?>
             Hola, <?= htmlspecialchars($perfilNombre) ?>
             <img src="<?= $baseUrl ?>/img/icon/Icon-Animados/saludo.gif" alt="👋" style="width:42px;height:42px;vertical-align:middle">
           </h1>
@@ -166,7 +173,7 @@ include __DIR__ . '/../../assets/topbar.php';
     <button class="gd-fab gd-fab-info" type="button" title="Información" onclick="alert('¡Bienvenido a GastroDigital!\nExplora, guarda y descubre nuevas recetas cada día.')">
         <i class="bi bi-exclamation-lg"></i>
     </button>
-    <button class="gd-fab gd-fab-chat" type="button" title="Chef Bot" id="gdChatFab">
+    <button class="gd-fab gd-fab-chat" type="button" title="Chefbot" id="gdChatFab">
         <i class="bi bi-chat-dots-fill"></i>
     </button>
 </div>

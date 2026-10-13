@@ -69,15 +69,27 @@ $pageTitle = 'Inicio';
                 <div class="col-lg-6 d-none d-lg-flex justify-content-center">
                     <div class="hero-cards-stack">
                         <?php
-                        $iconos = ['bi-egg-fried', 'bi-fire', 'bi-cup-hot'];
                         $clases = ['card-1', 'card-2', 'card-3'];
                         $muestra = array_slice($destacadas, 0, 3);
                         foreach ($muestra as $idx => $r):
+                            // Usar getCategoriaIcono para obtener el PNG correcto
+                            $catHero    = $r['categoria'] ?? 'Otros';
+                            $icoHero    = getCategoriaIcono($catHero);
+                            $icoUrlHero = BASE_URL . '/img/Icon/Categorias/' . $icoHero;
                         ?>
                         <div class="hero-float-card <?= $clases[$idx] ?>">
-                            <i class="bi <?= $iconos[$idx] ?>"></i>
+                            <img src="<?= $icoUrlHero ?>"
+                                 alt="<?= htmlspecialchars($catHero) ?>"
+                                 class="hero-card-icon-img"
+                                 onerror="this.style.display='none'">
                             <span><?= htmlspecialchars($r['titulo']) ?></span>
-                            <small>⏱ <?= $r['tiempo_preparacion'] ?> min · <?= htmlspecialchars($r['categoria'] ?? '') ?></small>
+                            <small>
+                                <i class="bi bi-clock" style="font-size:.65rem;margin-right:3px"></i>
+                                <?= $r['tiempo_preparacion'] ?> min
+                                <?php if (!empty($catHero)): ?>
+                                · <?= htmlspecialchars($catHero) ?>
+                                <?php endif; ?>
+                            </small>
                         </div>
                         <?php endforeach; ?>
                         <div class="hero-circle-bg"></div>
@@ -101,11 +113,21 @@ $pageTitle = 'Inicio';
                 <p class="section-subtitle">Encuentra tu próxima receta favorita por categoría</p>
             </div>
             <div class="categorias-scroll">
-                <?php foreach ($categorias as $cat): ?>
+                <?php foreach ($categorias as $cat):
+                    // Obtener icono PNG de la BD directamente (no clase Bootstrap)
+                    $catIcoFile = !empty($cat['icono']) ? $cat['icono'] : getCategoriaIcono($cat['nombre'] ?? '');
+                    // Si el icono es una clase Bootstrap (empieza por 'bi-'), usar PNG de fallback
+                    if (str_starts_with($catIcoFile, 'bi-')) {
+                        $catIcoFile = getCategoriaIcono($cat['nombre'] ?? '');
+                    }
+                ?>
                 <a href="<?= BASE_URL ?>/index.php?route=recetas&categoria=<?= urlencode($cat['nombre']) ?>"
                    class="categoria-chip"
                    style="--chip-color:<?= htmlspecialchars($cat['color']) ?>;--chip-bg:<?= htmlspecialchars($cat['bg']) ?>">
-                    <i class="bi <?= htmlspecialchars($cat['icono']) ?>"></i>
+                    <img src="<?= BASE_URL ?>/img/Icon/Categorias/<?= htmlspecialchars($catIcoFile) ?>"
+                         alt="<?= htmlspecialchars($cat['nombre']) ?>"
+                         style="width:20px;height:20px;object-fit:contain"
+                         onerror="this.style.display='none'">
                     <span><?= htmlspecialchars($cat['nombre']) ?></span>
                 </a>
                 <?php endforeach; ?>
@@ -135,28 +157,36 @@ $pageTitle = 'Inicio';
             <?php else: ?>
             <div class="row g-4 justify-content-center">
                 <?php foreach ($destacadas as $idx => $r):
-                    $color = $r['cat_color'] ?? '#c0392b';
+                    $catNombre = $r['categoria'] ?? $r['cat_nombre'] ?? 'Otros';
+                    $color     = getCategoriaColor($catNombre);
+                    $catIcono  = getCategoriaIcono($catNombre);
                     // ISO de país para flag
                     $isoFlag = '';
-                    if (!empty($r['id_pais'])) {
-                        $stmtP = $pdo->prepare("SELECT codigo_iso FROM paises WHERE id_pais = ? LIMIT 1");
-                        $stmtP->execute([$r['id_pais']]);
-                        $isoFlag = strtolower($stmtP->fetchColumn() ?: '');
-                    }
+                    try {
+                        if (!empty($r['id_pais'])) {
+                            $stmtP = $pdo->prepare("SELECT codigo_iso FROM paises WHERE id_pais = ? LIMIT 1");
+                            $stmtP->execute([$r['id_pais']]);
+                            $isoFlag = strtolower($stmtP->fetchColumn() ?: '');
+                        }
+                    } catch (Throwable $e) {}
                     $medals = ['🥇','🥈','🥉'];
                 ?>
                 <div class="col-sm-10 col-md-6 col-lg-4">
                     <div class="card receta-card h-100 position-relative overflow-hidden">
 
-                        <!-- Imagen o placeholder -->
+                        <!-- Imagen o placeholder con icono de categoría -->
                         <?php if (!empty($r['imagen']) && file_exists(ROOT_PATH . '/uploads/' . $r['imagen'])): ?>
                             <img src="<?= BASE_URL ?>/uploads/<?= htmlspecialchars($r['imagen']) ?>"
                                  class="card-img-top"
                                  alt="<?= htmlspecialchars($r['titulo']) ?>">
                         <?php else: ?>
                             <div class="receta-img-placeholder"
-                                 style="background:linear-gradient(135deg,<?= $color ?>22,<?= $color ?>55)">
-                                <i class="bi bi-egg-fried" style="color:<?= $color ?>"></i>
+                                 style="background:linear-gradient(135deg,<?= $color ?>18,<?= $color ?>38)">
+                                <img src="<?= BASE_URL ?>/img/Icon/Categorias/<?= $catIcono ?>"
+                                     alt="<?= htmlspecialchars($catNombre) ?>"
+                                     style="width:56px;height:56px;object-fit:contain;opacity:.45"
+                                     onerror="this.style.display='none';this.nextSibling.style.display='block'">
+                                <i class="bi bi-egg-fried" style="color:<?= $color ?>;display:none"></i>
                             </div>
                         <?php endif; ?>
 
@@ -166,22 +196,33 @@ $pageTitle = 'Inicio';
                             <?= $medals[$idx] ?? '' ?>
                         </span>
 
-                        <!-- Badge categoría + flag país -->
-                        <div class="position-absolute top-0 start-0 m-2 d-flex align-items-center gap-2">
-                            <!-- Badge categoría -->
-                            <?php if (!empty($r['categoria'])): ?>
-                            <span class="receta-badge">
-                                <?= htmlspecialchars($r['categoria']) ?>
+                        <!-- Badge categoría arriba-izquierda -->
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <?php if (!empty($catNombre)): ?>
+                            <span class="receta-badge-icon" style="font-size:.72rem">
+                                <img src="<?= BASE_URL ?>/img/Icon/Categorias/<?= $catIcono ?>"
+                                     alt="<?= htmlspecialchars($catNombre) ?>"
+                                     style="width:16px;height:16px;object-fit:contain"
+                                     onerror="this.style.display='none'">
+                                <span class="receta-categoria-nombre" style="font-size:.68rem">
+                                    <?= htmlspecialchars($catNombre) ?>
+                                </span>
                             </span>
                             <?php endif; ?>
-                            <!-- Flag país (local SVG) -->
-                            <?php if ($isoFlag): ?>
-                            <img src="<?= BASE_URL ?>/img/icon/flags/4x3/<?= $isoFlag ?>.svg"
-                                 alt="País"
-                                 class="receta-flag-badge"
-                                 onerror="this.style.display='none'">
-                            <?php endif; ?>
                         </div>
+
+                        <!-- Medalla posición — arriba-derecha -->
+                        <!-- (ya está renderizada antes, no se duplica) -->
+
+                        <!-- Bandera del país — abajo-derecha de la imagen -->
+                        <?php if ($isoFlag): ?>
+                        <img src="<?= BASE_URL ?>/img/icon/flags/4x3/<?= $isoFlag ?>.svg"
+                             alt="País"
+                             class="receta-flag-badge position-absolute"
+                             style="bottom:10px;right:10px;z-index:2;width:28px;height:20px;
+                                    border-radius:4px;box-shadow:0 1px 6px rgba(0,0,0,.28)"
+                             onerror="this.style.display='none'">
+                        <?php endif; ?>
 
                         <div class="card-body">
                             <h5 class="card-title fw-700 mb-1">
@@ -234,17 +275,23 @@ $pageTitle = 'Inicio';
             <div class="row g-4 justify-content-center">
                 <?php
                 $pasos = [
-                    ['num'=>'01','icon'=>'bi-person-plus',    'titulo'=>'Crea tu cuenta',    'desc'=>'Regístrate gratis en segundos y únete a la comunidad.'],
-                    ['num'=>'02','icon'=>'bi-search',          'titulo'=>'Explora recetas',   'desc'=>'Busca por nombre, ingrediente, tiempo o categoría.'],
-                    ['num'=>'03','icon'=>'bi-journal-richtext','titulo'=>'Publica las tuyas', 'desc'=>'Si eres chef, comparte tus creaciones con el mundo.'],
-                    ['num'=>'04','icon'=>'bi-heart',           'titulo'=>'Guarda favoritos',  'desc'=>'Marca las recetas que más te gusten para cocinarlas después.'],
+                    ['num'=>'01','ico'=>'registro.png',       'titulo'=>'Crea tu cuenta',    'desc'=>'Regístrate gratis en segundos y únete a la comunidad.'],
+                    ['num'=>'02','ico'=>'plato-principal.png', 'titulo'=>'Explora recetas',   'desc'=>'Busca por nombre, ingrediente, tiempo o categoría.'],
+                    ['num'=>'03','ico'=>'parrillada.png',      'titulo'=>'Publica las tuyas', 'desc'=>'Si eres chef, comparte tus creaciones con el mundo.'],
+                    ['num'=>'04','ico'=>'heart.gif',           'titulo'=>'Guarda favoritos',  'desc'=>'Marca las recetas que más te gusten para cocinarlas después.','anim'=>true],
                 ];
                 foreach ($pasos as $p):
+                    $icoDir = !empty($p['anim']) ? BASE_URL . '/img/Icon/Icon-Animados/' : BASE_URL . '/img/Icon/ICON-Sobrantes/';
                 ?>
                 <div class="col-sm-6 col-lg-3">
                     <div class="como-card text-center">
                         <div class="como-num"><?= $p['num'] ?></div>
-                        <div class="como-icon"><i class="bi <?= $p['icon'] ?>"></i></div>
+                        <div class="como-icon">
+                            <img src="<?= $icoDir . htmlspecialchars($p['ico']) ?>"
+                                 alt="<?= htmlspecialchars($p['titulo']) ?>"
+                                 style="width:40px;height:40px;object-fit:contain"
+                                 onerror="this.style.display='none'">
+                        </div>
                         <h5 class="fw-700 mt-3 mb-2"><?= $p['titulo'] ?></h5>
                         <p class="text-muted small mb-0"><?= $p['desc'] ?></p>
                     </div>
@@ -257,7 +304,10 @@ $pageTitle = 'Inicio';
     <!-- ══ CTA FINAL ═════════════════════════════════════════════════════ -->
     <section class="cta-section">
         <div class="container text-center">
-            <i class="bi bi-egg-fried cta-icon"></i>
+            <img src="<?= BASE_URL ?>/img/Icon/Categorias/plato-principal.png"
+                 alt="" class="cta-icon"
+                 style="width:64px;height:64px;object-fit:contain;opacity:.85"
+                 onerror="this.style.display='none'">
             <h2 class="cta-title">¿Listo para cocinar algo increíble?</h2>
             <p class="cta-subtitle">Únete a cocineros apasionados en GastroDigital</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap mt-4">

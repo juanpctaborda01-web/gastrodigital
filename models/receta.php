@@ -65,7 +65,9 @@ class Receta {
         $fkValRec  = $this->colExists('valoraciones', 'id_receta') ? 'id_receta'  : $pkR;
         $fkPaisIso = $this->colExists('paises', 'codigo_iso')    ? 'codigo_iso'   : '';
 
-        $where  = ['r.publicada = 1'];
+        // Solo filtrar por publicada si la columna existe
+        $filtrarPublicada = $this->colExists('recetas', 'publicada');
+        $where  = $filtrarPublicada ? ['r.publicada = 1'] : ['1=1'];
         $params = [];
 
         if (!empty($filtros['destacada'])) {
@@ -99,6 +101,10 @@ class Receta {
             $where[]  = 'r.tiempo_preparacion <= ?';
             $params[] = (int)$filtros['tiempo'];
         }
+        if (!empty($filtros['excluir_chef_id'])) {
+            $where[]  = "r.$fkRecChef <> ?";
+            $params[] = (int)$filtros['excluir_chef_id'];
+        }
 
         $whereSQL = 'WHERE ' . implode(' AND ', $where);
         $offset   = ($pagina - 1) * $porPagina;
@@ -117,11 +123,15 @@ class Receta {
         $sql = "SELECT DISTINCT
                        r.$pkR AS id, r.titulo, r.descripcion, r.tiempo_preparacion,
                        r.dificultad, r.$fkRecCat AS id_categoria, r.$fkRecPais AS id_pais,
+                       r.$fkRecChef AS id_chef,
                        r.imagen, r.calorias, r.porciones, r.destacada, r.visitas,
-                       c_lf.nombre AS categoria, c_lf.color AS cat_color, c_lf.icono AS cat_icono,
+                       COALESCE(c_lf.nombre, 'Otros')          AS categoria,
+                       COALESCE(c_lf.color,  '#8e8e8e')        AS cat_color,
+                       COALESCE(c_lf.icono,  'plato-principal.png') AS cat_icono,
                        $isoCol
                        p_lf.nombre AS pais_nombre,
-                       u.nombre AS chef_nombre,
+                       COALESCE(u.nombre, 'Chef desconocido')  AS chef_nombre,
+                       u.avatar AS chef_avatar,
                        ROUND(AVG(v.puntuacion), 1) AS rating,
                        COUNT(DISTINCT v.$pkV) AS total_valoraciones
                 FROM recetas r
@@ -191,13 +201,20 @@ class Receta {
     // Obtener receta para edición
     public function obtenerParaEditar(int $id, int $chefId): ?array {
         $pkR   = $this->pk('recetas');
+        $pkCat = $this->pk('categorias');
         $fkChef = $this->colExists('recetas', 'id_chef') ? 'id_chef' : 'id_chef';
-        $stmt = $this->pdo->prepare("SELECT * FROM recetas WHERE $pkR = ? AND $fkChef = ?");
+        $fkCat = $this->colExists('recetas', 'id_categoria') ? 'id_categoria' : $pkCat;
+        $stmt = $this->pdo->prepare("
+            SELECT r.*, r.$pkR AS id, COALESCE(c.nombre, '') AS categoria
+            FROM recetas r
+            LEFT JOIN categorias c ON c.$pkCat = r.$fkCat
+            WHERE r.$pkR = ? AND r.$fkChef = ?
+        ");
         $stmt->execute([$id, $chefId]);
         $receta = $stmt->fetch();
         if (!$receta) return null;
 
-        $stmt2 = $this->pdo->prepare("SELECT * FROM ingredientes WHERE id_receta = ? ORDER BY orden, id");
+        $stmt2 = $this->pdo->prepare("SELECT * FROM ingredientes WHERE id_receta = ? ORDER BY orden");
         $stmt2->execute([$id]);
         $receta['ingredientes'] = $stmt2->fetchAll();
 
@@ -218,25 +235,42 @@ class Receta {
             $stmtCat->execute([$datos['categoria']]);
             $idCategoria = $stmtCat->fetchColumn() ?: null;
         }
-        $imgPart = !empty($datos['imagen']) ? ", imagen = ?" : "";
-        $fkChef  = $this->colExists('recetas', 'id_chef') ? 'id_chef' : 'id_chef';
+        $imgPart      = !empty($datos['imagen']) ? ", imagen = ?" : "";
+        // publicada: si viene en datos la usamos; si no, la mantenemos (no tocamos)
+        $pubPart      = array_key_exists('publicada', $datos) ? ", publicada = ?" : "";
+        $fkChef       = $this->colExists('recetas', 'id_chef') ? 'id_chef' : 'id_chef';
         $stmt = $this->pdo->prepare("
             UPDATE recetas
             SET titulo = ?, descripcion = ?, tiempo_preparacion = ?, porciones = ?,
                 dificultad = ?, id_categoria = ?, calorias = ?
                 $imgPart
+                $pubPart
             WHERE $pkR = ? AND $fkChef = ?
         ");
         $params = [
-            $datos['titulo'], $datos['descripcion'], (int)$datos['tiempo'],
+            $datos['titulo'], $datos['descripcion'] ?? '', (int)$datos['tiempo'],
             (int)($datos['porciones'] ?? 4), $datos['dificultad'], $idCategoria,
             $datos['calorias'] ?? null,
         ];
-        if (!empty($datos['imagen'])) $params[] = $datos['imagen'];
+        if (!empty($datos['imagen']))                    $params[] = $datos['imagen'];
+        if (array_key_exists('publicada', $datos))       $params[] = (int)(bool)$datos['publicada'];
         $params[] = $id;
         $params[] = (int)$datos['id_chef'];
         $stmt->execute($params);
         return true;
+    }
+
+    /** Cambia publicada ↔ borrador para el chef dueño. Devuelve el nuevo estado. */
+    public function togglePublicada(int $recetaId, int $chefId): array {
+        $pkR    = $this->pk('recetas');
+        $fkChef = $this->colExists('recetas', 'id_chef') ? 'id_chef' : 'id_chef';
+        $stmt   = $this->pdo->prepare("SELECT publicada FROM recetas WHERE $pkR = ? AND $fkChef = ?");
+        $stmt->execute([$recetaId, $chefId]);
+        $row = $stmt->fetch();
+        if (!$row) return ['error' => 'Receta no encontrada o sin permiso'];
+        $nuevo = $row['publicada'] ? 0 : 1;
+        $this->pdo->prepare("UPDATE recetas SET publicada = ? WHERE $pkR = ?")->execute([$nuevo, $recetaId]);
+        return ['publicada' => (bool)$nuevo];
     }
 
     // Obtener receta completa con ingredientes, pasos, comentarios
@@ -251,9 +285,11 @@ class Receta {
 
         $stmt = $this->pdo->prepare("
             SELECT r.*, r.$pkR AS id,
-                   u.nombre AS chef_nombre, u.bio AS chef_bio,
+                   COALESCE(u.nombre, 'Chef desconocido') AS chef_nombre,
+                   u.avatar AS chef_avatar,
+                   u.bio AS chef_bio,
                    u.$pkU AS chef_id,
-                   c_cat.nombre AS categoria,
+                   COALESCE(c_cat.nombre, 'Otros') AS categoria,
                    ROUND(AVG(v.puntuacion), 1) AS rating,
                    COUNT(DISTINCT v.$pkV) AS total_valoraciones
             FROM recetas r
@@ -267,7 +303,7 @@ class Receta {
         $receta = $stmt->fetch();
         if (!$receta) return null;
 
-        $stmt2 = $this->pdo->prepare("SELECT * FROM ingredientes WHERE id_receta = ? ORDER BY orden, id");
+        $stmt2 = $this->pdo->prepare("SELECT * FROM ingredientes WHERE id_receta = ? ORDER BY orden");
         $stmt2->execute([$id]);
         $receta['ingredientes'] = $stmt2->fetchAll();
 
@@ -279,7 +315,8 @@ class Receta {
         $fkComRec = $this->colExists('comentarios', 'id_receta') ? 'id_receta' : $pkR;
         $fkComUsr = $this->colExists('comentarios', 'id_usuario') ? 'id_usuario' : $pkU;
         $stmt4 = $this->pdo->prepare("
-            SELECT c.*, c.$pkCom AS id_comentario, u.nombre AS autor
+            SELECT c.*, c.$pkCom AS id_comentario, u.nombre AS autor,
+                   u.avatar AS autor_avatar
             FROM comentarios c JOIN usuarios u ON u.$pkU = c.$fkComUsr
             WHERE c.$fkComRec = ? ORDER BY c.created_at ASC
         ");
@@ -326,13 +363,14 @@ class Receta {
         $stmt = $this->pdo->prepare("
             INSERT INTO recetas (titulo, descripcion, tiempo_preparacion, porciones,
                                  dificultad, id_categoria, imagen, calorias, id_chef, publicada, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         $stmt->execute([
             $datos['titulo'], $datos['descripcion'] ?? '',
             (int)$datos['tiempo'], (int)($datos['porciones'] ?? 4),
             $datos['dificultad'] ?? 'Fácil', $idCategoria,
             $datos['imagen'] ?? null, $datos['calorias'] ?? null, $chefId,
+            isset($datos['publicada']) ? (int)(bool)$datos['publicada'] : 1,
         ]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -388,9 +426,11 @@ class Receta {
 
         $stmt = $this->pdo->prepare("
             SELECT r.*, r.$pkR AS id,
-                   c_cat.nombre AS categoria, c_cat.color AS cat_color, c_cat.icono AS cat_icono,
+                   COALESCE(c_cat.nombre, 'Otros')         AS categoria,
+                   COALESCE(c_cat.color,  '#8e8e8e')       AS cat_color,
+                   COALESCE(c_cat.icono,  'plato-principal.png') AS cat_icono,
                    $isoCol
-                   u.nombre AS chef_nombre,
+                   COALESCE(u.nombre, 'Chef desconocido')  AS chef_nombre,
                    ROUND(AVG(v.puntuacion),1) AS rating
             FROM favoritos f
             JOIN recetas r          ON r.$pkR  = f.$fkFavRec
@@ -409,12 +449,14 @@ class Receta {
         $pkV = $this->pk('valoraciones');
         $stmt = $this->pdo->prepare("SELECT $pkV FROM valoraciones WHERE id_usuario = ? AND id_receta = ?");
         $stmt->execute([$userId, $recetaId]);
-        if ($stmt->fetch()) {
+        $esNueva = !$stmt->fetch();
+        if (!$esNueva) {
             $this->pdo->prepare("UPDATE valoraciones SET puntuacion=?, comentario=? WHERE id_usuario=? AND id_receta=?")
                       ->execute([$puntuacion, $comentario, $userId, $recetaId]);
         } else {
             $this->pdo->prepare("INSERT INTO valoraciones (id_receta, id_usuario, puntuacion, comentario) VALUES (?,?,?,?)")
                       ->execute([$recetaId, $userId, $puntuacion, $comentario]);
+            $this->notificarChefReceta($recetaId, $userId, 'valoracion', 'Nueva valoración para tu receta: ');
         }
         return ['exito' => true];
     }
@@ -423,6 +465,7 @@ class Receta {
         if (trim($contenido) === '') return ['error' => 'El comentario no puede estar vacío'];
         $this->pdo->prepare("INSERT INTO comentarios (id_receta, id_usuario, contenido) VALUES (?,?,?)")
             ->execute([$recetaId, $userId, trim($contenido)]);
+        $this->notificarChefReceta($recetaId, $userId, 'comentario', 'Nuevo comentario en tu receta: ');
         return ['exito' => true];
     }
 
@@ -436,7 +479,37 @@ class Receta {
             INSERT INTO reportes (id_receta,id_comentario,id_usuario,id_valoracion,reportado_por,motivo,descripcion,estado,created_at)
             VALUES (?,?,?,?,?,?,?,'pendiente',NOW())
         ")->execute([$idReceta,$idComentario,$idUsuario,$idValoracion,$userId,$motivo,trim($descripcion)]);
+        $admins = $this->pdo->query("SELECT id_usuario FROM usuarios WHERE rol = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
+        require_once __DIR__ . '/Notificacion.php';
+        $notificacion = new Notificacion();
+        foreach ($admins as $adminId) {
+            $notificacion->crear(
+                (int)$adminId,
+                'reporte',
+                'Se recibió un nuevo reporte para moderación.',
+                'index.php?route=admin/reportes'
+            );
+        }
         return ['exito' => true];
+    }
+
+    private function notificarChefReceta(int $recetaId, int $actorId, string $tipo, string $prefijo): void {
+        $fkChef = $this->colExists('recetas', 'id_chef') ? 'id_chef' : 'chef_id';
+        $pkR = $this->pk('recetas');
+        $stmt = $this->pdo->prepare("SELECT $fkChef AS id_chef, titulo FROM recetas WHERE $pkR = ?");
+        $stmt->execute([$recetaId]);
+        $receta = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$receta || empty($receta['id_chef']) || (int)$receta['id_chef'] === $actorId) {
+            return;
+        }
+
+        require_once __DIR__ . '/Notificacion.php';
+        (new Notificacion())->crear(
+            (int)$receta['id_chef'],
+            $tipo,
+            $prefijo . $receta['titulo'],
+            'index.php?route=recetas&id=' . $recetaId
+        );
     }
 
     public function eliminar(int $recetaId, int $userId, string $rol = 'chef'): array {
@@ -486,8 +559,8 @@ class Receta {
         $fkRecCat  = $this->colExists('recetas','id_categoria')  ? 'id_categoria':'id_categoria';
         $stmt = $this->pdo->prepare("
             SELECT r.$pkR AS id, r.titulo, r.dificultad, r.visitas,
-                   c_cat.nombre AS categoria,
-                   u.nombre AS chef_nombre,
+                   COALESCE(c_cat.nombre, 'Otros') AS categoria,
+                   COALESCE(u.nombre, 'Chef desconocido') AS chef_nombre,
                    ROUND(AVG(v.puntuacion),1) AS rating,
                    COUNT(DISTINCT f.$pkF) AS total_favoritos
             FROM recetas r
@@ -534,7 +607,8 @@ class Receta {
         $fkComUsr = $this->colExists('comentarios','id_usuario') ? 'id_usuario': $pkU;
         $stmt = $this->pdo->prepare("
             SELECT c.$pkCom AS id_comentario, c.contenido, c.created_at,
-                   u.nombre AS autor, r.titulo AS receta_titulo, r.$pkR AS id_receta
+                   u.nombre AS autor, u.avatar AS autor_avatar,
+                   r.titulo AS receta_titulo, r.$pkR AS id_receta
             FROM comentarios c
             JOIN recetas  r ON r.$pkR = c.$fkComRec
             JOIN usuarios u ON u.$pkU = c.$fkComUsr
@@ -818,6 +892,409 @@ class Receta {
             GROUP BY r.$pkR ORDER BY r.destacada DESC, r.created_at DESC LIMIT ?
         ");
         $stmt->execute([$like, $like, $like, $limite]);
+        return $stmt->fetchAll();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ── MÉTODOS EXCLUSIVOS DEL ADMINISTRADOR ─────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Listado paginado de TODAS las recetas para el panel admin,
+     * incluyendo filtros por título, categoría, país, chef, dificultad,
+     * publicada y destacada.
+     */
+    public function listarAdmin(array $f = [], int $pag = 1, int $pp = 15): array
+    {
+        $pkR  = $this->pk('recetas');
+        $pkC  = $this->pk('categorias');
+        $pkP  = $this->pk('paises');
+        $pkU  = $this->pk('usuarios');
+        $pkV  = $this->pk('valoraciones');
+
+        $fkCat  = $this->colExists('recetas', 'id_categoria') ? 'id_categoria' : 'categoria_id';
+        $fkPais = $this->colExists('recetas', 'id_pais')      ? 'id_pais'      : 'pais_id';
+        $fkChef = $this->colExists('recetas', 'id_chef')      ? 'id_chef'      : 'chef_id';
+        $fkVRec = $this->colExists('valoraciones', 'id_receta') ? 'id_receta'  : $pkR;
+
+        $where  = ['1=1'];
+        $params = [];
+
+        if (!empty($f['q'])) {
+            $where[]  = 'r.titulo LIKE ?';
+            $params[] = '%' . $f['q'] . '%';
+        }
+        if (!empty($f['id_categoria'])) {
+            $where[]  = "r.$fkCat = ?";
+            $params[] = (int)$f['id_categoria'];
+        }
+        if (!empty($f['id_pais'])) {
+            $where[]  = "r.$fkPais = ?";
+            $params[] = (int)$f['id_pais'];
+        }
+        if (!empty($f['id_chef'])) {
+            $where[]  = "r.$fkChef = ?";
+            $params[] = (int)$f['id_chef'];
+        }
+        if (!empty($f['dificultad'])) {
+            $where[]  = 'r.dificultad = ?';
+            $params[] = $f['dificultad'];
+        }
+        if (isset($f['publicada']) && $f['publicada'] !== '') {
+            $where[]  = 'r.publicada = ?';
+            $params[] = (int)$f['publicada'];
+        }
+        if (isset($f['destacada']) && $f['destacada'] !== '') {
+            $where[]  = 'r.destacada = ?';
+            $params[] = (int)$f['destacada'];
+        }
+
+        $sql   = implode(' AND ', $where);
+        $off   = ($pag - 1) * $pp;
+
+        $total = (int)$this->pdo->prepare(
+            "SELECT COUNT(*) FROM recetas r WHERE $sql"
+        )->execute($params) ? (function() use ($sql, $params) {
+            $s = $this->pdo->prepare("SELECT COUNT(*) FROM recetas r WHERE $sql");
+            $s->execute($params);
+            return (int)$s->fetchColumn();
+        })() : 0;
+        // ── rehacer la cuenta limpiamente ──
+        $stmtC = $this->pdo->prepare("SELECT COUNT(*) FROM recetas r WHERE $sql");
+        $stmtC->execute($params);
+        $total = (int)$stmtC->fetchColumn();
+
+        $stmtR = $this->pdo->prepare("
+            SELECT r.$pkR AS id_receta,
+                   r.titulo, r.dificultad, r.tiempo_preparacion, r.porciones,
+                   r.imagen, r.publicada, r.destacada, r.visitas,
+                   r.created_at, r.updated_at,
+                   r.$fkCat AS id_categoria,
+                   r.$fkPais AS id_pais,
+                   r.$fkChef AS id_chef,
+                   COALESCE(cat.nombre, 'Otros')           AS categoria_nombre,
+                   p.nombre                                AS pais_nombre,
+                   COALESCE(u.nombre, 'Chef desconocido')  AS chef_nombre,
+                   ROUND(AVG(v.puntuacion),1) AS rating
+            FROM recetas r
+            LEFT JOIN categorias cat ON cat.$pkC = r.$fkCat
+            LEFT JOIN paises     p   ON p.$pkP   = r.$fkPais
+            LEFT JOIN usuarios   u   ON u.$pkU   = r.$fkChef
+            LEFT JOIN valoraciones v ON v.$fkVRec = r.$pkR
+            WHERE $sql
+            GROUP BY r.$pkR
+            ORDER BY r.created_at DESC
+            LIMIT $pp OFFSET $off
+        ");
+        $stmtR->execute($params);
+
+        return [
+            'recetas' => $stmtR->fetchAll(),
+            'total'   => $total,
+            'paginas' => (int)ceil($total / $pp),
+            'pagina'  => $pag,
+        ];
+    }
+
+    /**
+     * Obtiene una receta completa con ingredientes y pasos para el admin.
+     * No filtra por publicada ni por chef — acceso total.
+     */
+    public function obtenerCompletaAdmin(int $id): ?array
+    {
+        $pkR  = $this->pk('recetas');
+        $pkC  = $this->pk('categorias');
+        $pkP  = $this->pk('paises');
+        $pkU  = $this->pk('usuarios');
+        $pkV  = $this->pk('valoraciones');
+
+        $fkCat  = $this->colExists('recetas', 'id_categoria') ? 'id_categoria' : 'categoria_id';
+        $fkPais = $this->colExists('recetas', 'id_pais')      ? 'id_pais'      : 'pais_id';
+        $fkChef = $this->colExists('recetas', 'id_chef')      ? 'id_chef'      : 'chef_id';
+        $fkVRec = $this->colExists('valoraciones', 'id_receta') ? 'id_receta'  : $pkR;
+
+        $stmt = $this->pdo->prepare("
+            SELECT r.*,
+                   r.$pkR AS id_receta,
+                   cat.nombre AS categoria_nombre,
+                   p.nombre   AS pais_nombre,
+                   p.codigo_iso,
+                   u.nombre   AS chef_nombre,
+                   ROUND(AVG(v.puntuacion),1) AS rating,
+                   COUNT(DISTINCT v.$pkV) AS total_valoraciones
+            FROM recetas r
+            LEFT JOIN categorias cat ON cat.$pkC = r.$fkCat
+            LEFT JOIN paises     p   ON p.$pkP   = r.$fkPais
+            LEFT JOIN usuarios   u   ON u.$pkU   = r.$fkChef
+            LEFT JOIN valoraciones v ON v.$fkVRec = r.$pkR
+            WHERE r.$pkR = ?
+            GROUP BY r.$pkR
+        ");
+        $stmt->execute([$id]);
+        $receta = $stmt->fetch();
+        if (!$receta) return null;
+
+        // Ingredientes
+        $pkI    = $this->pk('ingredientes');
+        $fkIRec = $this->colExists('ingredientes', 'id_receta') ? 'id_receta' : $pkR;
+        $stmtI  = $this->pdo->prepare("
+            SELECT $pkI AS id_ingrediente, nombre, cantidad, unidad, opcional, orden
+            FROM ingredientes
+            WHERE $fkIRec = ?
+            ORDER BY orden ASC, $pkI ASC
+        ");
+        $stmtI->execute([$id]);
+        $receta['ingredientes'] = $stmtI->fetchAll();
+
+        // Pasos
+        $pkPs    = $this->pk('pasos');
+        $fkPsRec = $this->colExists('pasos', 'id_receta') ? 'id_receta' : $pkR;
+        $stmtPs  = $this->pdo->prepare("
+            SELECT $pkPs AS id_pasos, numero, descripcion, duracion
+            FROM pasos
+            WHERE $fkPsRec = ?
+            ORDER BY numero ASC
+        ");
+        $stmtPs->execute([$id]);
+        $receta['pasos'] = $stmtPs->fetchAll();
+
+        return $receta;
+    }
+
+    /**
+     * Crea una receta completa (receta + ingredientes + pasos) dentro
+     * de una transacción. El admin puede asignar cualquier chef.
+     * Devuelve el id_receta creado, o lanza excepción si falla.
+     */
+    public function crearAdmin(array $d): int
+    {
+        $fkCat  = $this->colExists('recetas', 'id_categoria') ? 'id_categoria' : 'categoria_id';
+        $fkPais = $this->colExists('recetas', 'id_pais')      ? 'id_pais'      : 'pais_id';
+        $fkChef = $this->colExists('recetas', 'id_chef')      ? 'id_chef'      : 'chef_id';
+        $fkIRec = $this->colExists('ingredientes', 'id_receta') ? 'id_receta'  : 'receta_id';
+        $fkPRec = $this->colExists('pasos',        'id_receta') ? 'id_receta'  : 'receta_id';
+
+        $this->pdo->beginTransaction();
+        try {
+            // 1 — Receta principal
+            $stmt = $this->pdo->prepare("
+                INSERT INTO recetas
+                    (titulo, descripcion, tiempo_preparacion, porciones,
+                     dificultad, $fkCat, $fkPais, imagen, video_url,
+                     calorias, $fkChef, publicada, destacada, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())
+            ");
+            $stmt->execute([
+                $d['titulo'],
+                $d['descripcion'] ?? null,
+                (int)($d['tiempo_preparacion'] ?? 0),
+                (int)($d['porciones'] ?? 4),
+                $d['dificultad']   ?? 'Media',
+                $d['id_categoria'] ? (int)$d['id_categoria'] : null,
+                $d['id_pais']      ? (int)$d['id_pais']      : null,
+                $d['imagen']       ?? null,
+                $d['video_url']    ?? null,
+                $d['calorias']     ? (int)$d['calorias']     : null,
+                $d['id_chef']      ? (int)$d['id_chef']      : null,
+                (int)(bool)($d['publicada'] ?? 0),
+                (int)(bool)($d['destacada'] ?? 0),
+            ]);
+            $recetaId = (int)$this->pdo->lastInsertId();
+
+            // 2 — Ingredientes
+            if (!empty($d['ingredientes'])) {
+                $stmtI = $this->pdo->prepare("
+                    INSERT INTO ingredientes ($fkIRec, nombre, cantidad, unidad, opcional, orden)
+                    VALUES (?,?,?,?,?,?)
+                ");
+                foreach ($d['ingredientes'] as $i => $ing) {
+                    $nombre = trim($ing['nombre'] ?? '');
+                    if ($nombre === '') continue;
+                    $stmtI->execute([
+                        $recetaId,
+                        $nombre,
+                        trim($ing['cantidad'] ?? ''),
+                        trim($ing['unidad']   ?? ''),
+                        0,
+                        $i + 1,
+                    ]);
+                }
+            }
+
+            // 3 — Pasos
+            if (!empty($d['pasos'])) {
+                $stmtP = $this->pdo->prepare("
+                    INSERT INTO pasos ($fkPRec, numero, descripcion)
+                    VALUES (?,?,?)
+                ");
+                foreach ($d['pasos'] as $num => $desc) {
+                    $desc = trim(is_array($desc) ? ($desc['descripcion'] ?? '') : $desc);
+                    if ($desc === '') continue;
+                    $stmtP->execute([$recetaId, $num + 1, $desc]);
+                }
+            }
+
+            $this->pdo->commit();
+            return $recetaId;
+
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Actualiza una receta existente (receta + ingredientes + pasos)
+     * dentro de una transacción. El admin puede editar cualquier receta.
+     */
+    public function editarAdmin(int $id, array $d): bool
+    {
+        $pkR    = $this->pk('recetas');
+        $fkCat  = $this->colExists('recetas', 'id_categoria') ? 'id_categoria' : 'categoria_id';
+        $fkPais = $this->colExists('recetas', 'id_pais')      ? 'id_pais'      : 'pais_id';
+        $fkChef = $this->colExists('recetas', 'id_chef')      ? 'id_chef'      : 'chef_id';
+        $fkIRec = $this->colExists('ingredientes', 'id_receta') ? 'id_receta'  : 'receta_id';
+        $fkPRec = $this->colExists('pasos',        'id_receta') ? 'id_receta'  : 'receta_id';
+
+        // Verificar que la receta existe
+        $existe = $this->pdo->prepare("SELECT $pkR FROM recetas WHERE $pkR = ?")->execute([$id]);
+        $row    = $this->pdo->prepare("SELECT $pkR FROM recetas WHERE $pkR = ?");
+        $row->execute([$id]);
+        if (!$row->fetch()) return false;
+
+        $this->pdo->beginTransaction();
+        try {
+            // 1 — Actualizar receta
+            $imgPart = !empty($d['imagen']) ? ", imagen = ?" : '';
+            $stmt = $this->pdo->prepare("
+                UPDATE recetas SET
+                    titulo              = ?,
+                    descripcion         = ?,
+                    tiempo_preparacion  = ?,
+                    porciones           = ?,
+                    dificultad          = ?,
+                    $fkCat              = ?,
+                    $fkPais             = ?,
+                    video_url           = ?,
+                    calorias            = ?,
+                    $fkChef             = ?,
+                    publicada           = ?,
+                    destacada           = ?,
+                    updated_at          = NOW()
+                    $imgPart
+                WHERE $pkR = ?
+            ");
+            $params = [
+                $d['titulo'],
+                $d['descripcion'] ?? null,
+                (int)($d['tiempo_preparacion'] ?? 0),
+                (int)($d['porciones'] ?? 4),
+                $d['dificultad']   ?? 'Media',
+                $d['id_categoria'] ? (int)$d['id_categoria'] : null,
+                $d['id_pais']      ? (int)$d['id_pais']      : null,
+                $d['video_url']    ?? null,
+                $d['calorias']     ? (int)$d['calorias']     : null,
+                $d['id_chef']      ? (int)$d['id_chef']      : null,
+                (int)(bool)($d['publicada'] ?? 0),
+                (int)(bool)($d['destacada'] ?? 0),
+            ];
+            if (!empty($d['imagen'])) $params[] = $d['imagen'];
+            $params[] = $id;
+            $stmt->execute($params);
+
+            // 2 — Reemplazar ingredientes (DELETE + INSERT dentro de la tx)
+            $this->pdo->prepare("DELETE FROM ingredientes WHERE $fkIRec = ?")->execute([$id]);
+            if (!empty($d['ingredientes'])) {
+                $stmtI = $this->pdo->prepare("
+                    INSERT INTO ingredientes ($fkIRec, nombre, cantidad, unidad, opcional, orden)
+                    VALUES (?,?,?,?,?,?)
+                ");
+                foreach ($d['ingredientes'] as $i => $ing) {
+                    $nombre = trim($ing['nombre'] ?? '');
+                    if ($nombre === '') continue;
+                    $stmtI->execute([
+                        $id,
+                        $nombre,
+                        trim($ing['cantidad'] ?? ''),
+                        trim($ing['unidad']   ?? ''),
+                        0,
+                        $i + 1,
+                    ]);
+                }
+            }
+
+            // 3 — Reemplazar pasos (DELETE + INSERT dentro de la tx)
+            $this->pdo->prepare("DELETE FROM pasos WHERE $fkPRec = ?")->execute([$id]);
+            if (!empty($d['pasos'])) {
+                $stmtP = $this->pdo->prepare("
+                    INSERT INTO pasos ($fkPRec, numero, descripcion)
+                    VALUES (?,?,?)
+                ");
+                foreach ($d['pasos'] as $num => $desc) {
+                    $desc = trim(is_array($desc) ? ($desc['descripcion'] ?? '') : $desc);
+                    if ($desc === '') continue;
+                    $stmtP->execute([$id, $num + 1, $desc]);
+                }
+            }
+
+            $this->pdo->commit();
+            return true;
+
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Elimina una receta y todos sus datos relacionados dentro
+     * de una transacción. Uso exclusivo del administrador.
+     */
+    public function eliminarAdmin(int $id): bool
+    {
+        $pkR    = $this->pk('recetas');
+        $fkIRec = $this->colExists('ingredientes', 'id_receta') ? 'id_receta' : 'receta_id';
+        $fkPRec = $this->colExists('pasos',        'id_receta') ? 'id_receta' : 'receta_id';
+
+        // Verificar que existe
+        $chk = $this->pdo->prepare("SELECT $pkR FROM recetas WHERE $pkR = ?");
+        $chk->execute([$id]);
+        if (!$chk->fetch()) return false;
+
+        $this->pdo->beginTransaction();
+        try {
+            // Eliminar en orden para respetar FKs (si no hay CASCADE)
+            foreach ([
+                "DELETE FROM ingredientes WHERE $fkIRec = ?",
+                "DELETE FROM pasos        WHERE $fkPRec = ?",
+                "DELETE FROM favoritos    WHERE id_receta = ?",
+                "DELETE FROM comentarios  WHERE id_receta = ?",
+                "DELETE FROM valoraciones WHERE id_receta = ?",
+                "DELETE FROM recetas      WHERE $pkR = ?",
+            ] as $sql) {
+                $this->pdo->prepare($sql)->execute([$id]);
+            }
+            $this->pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Devuelve la lista de usuarios con rol chef o admin para el
+     * selector "Chef" del formulario admin.
+     */
+    public function listarChefs(): array
+    {
+        $pkU = $this->pk('usuarios');
+        $stmt = $this->pdo->query("
+            SELECT $pkU AS id_usuario, nombre
+            FROM usuarios
+            WHERE rol IN ('chef','admin') AND activo = 1
+            ORDER BY nombre ASC
+        ");
         return $stmt->fetchAll();
     }
 }

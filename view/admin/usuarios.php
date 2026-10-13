@@ -14,19 +14,32 @@ unset($_SESSION['exito'], $_SESSION['error']);
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
 
-<main class="py-5">
+<?php
+$topbarBadge      = 'Admin';
+$topbarBreadcrumb = [
+    ['label'=>'Panel','href'=> BASE_URL . '/admin'],
+    ['label'=>'Gestión de Usuarios'],
+];
+include __DIR__ . '/../../assets/topbar.php';
+?>
+
+<main class="pb-5">
 <div class="container">
 
-    <div class="mb-4">
-        <h2 class="fw-800 mb-0">Gestión de Usuarios</h2>
-        <p class="text-muted"><?= count($usuarios) ?> usuarios registrados</p>
-    </div>
+    <?php
+    $phTag     = 'Gestión';
+    $phTagIcon = 'people-fill';
+    $phTitle   = 'Usuarios del sistema';
+    $phSub     = count($usuarios) . ' usuarios registrados';
+    $phArt     = 'people-fill';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <?php if ($exito): ?>
-        <div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($exito) ?></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($exito) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
     <?php if ($error): ?>
-        <div class="alert alert-danger"><i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
 
     <div class="table-custom">

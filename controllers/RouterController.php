@@ -32,10 +32,14 @@ class RouterController
 
         $r->add('GET',  'logout',         ['AuthController',  'logout']);
         $r->add('GET',  'cerrar-sesion',  ['AuthController',  'logout']);
+        $r->add('GET',  'chatbot',        ['ChatbotController', 'historial']);
         $r->add('POST', 'chatbot',        ['ChatbotController', 'respuesta']);
 
         // ── Perfil (Común a todos) ────────────────────────────────────────
         $r->add('GET',  'perfil',   ['PageController', 'perfil']);
+        $r->add('GET',  'notificaciones', ['PageController', 'notificaciones']);
+        $r->add('POST', 'notificacion/leida', ['PageController', 'marcarNotificacionLeida']);
+        $r->add('POST', 'notificaciones/leer-todas', ['PageController', 'marcarTodasNotificacionesLeidas']);
 
         // ── Usuario ───────────────────────────────────────────────────────
         $r->add('GET',  'dashboard',       ['PageController', 'dashboardUsuario']);
@@ -48,10 +52,13 @@ class RouterController
         $r->add('GET',  'mis-valoraciones',['PageController', 'misComentarios']); // alias → misma vista, tab=valoraciones
 
         // ── Chef ──────────────────────────────────────────────────────────
-        $r->add('GET',  'chef/dashboard',  ['PageController', 'misRecetas']);
-        $r->add('GET',  'mis-recetas',     ['PageController', 'misRecetas']);
-        $r->add('GET',  'crear-receta',    ['PageController', 'crearReceta']);
-        $r->add('GET',  'editar-receta',   ['PageController', 'editarReceta']);
+        $r->add('GET',  'chef/dashboard',      ['PageController', 'misRecetas']);
+        $r->add('GET',  'mis-recetas',         ['PageController', 'misRecetas']);
+        $r->add('GET',  'crear-receta',        ['PageController', 'crearReceta']);
+        $r->add('POST', 'crear-receta',        ['PageController', 'crearReceta']);
+        $r->add('GET',  'editar-receta',       ['PageController', 'editarReceta']);
+        $r->add('POST', 'editar-receta',       ['PageController', 'editarReceta']);
+        $r->add('POST', 'eliminar-receta',     ['PageController', 'eliminarReceta']);
 
         // ── Admin ─────────────────────────────────────────────────────────
         $r->add('GET',  'admin',             ['PageController', 'dashboardAdmin']);
@@ -59,6 +66,19 @@ class RouterController
         $r->add('GET',  'admin/categorias',  ['PageController', 'adminCategorias']);
         $r->add('GET',  'admin/reportes',    ['PageController', 'adminReportes']);
         $r->add('GET',  'admin/moderacion',  ['PageController', 'adminModeracion']);
+
+        // ── Admin — Gestión de recetas ────────────────────────────────────────
+        $r->add('GET',  'admin/recetas',          ['PageController', 'adminRecetas']);
+        $r->add('GET',  'admin/recetas/nueva',     ['PageController', 'adminRecetaNueva']);
+        $r->add('POST', 'admin/recetas/nueva',     ['PageController', 'adminRecetaNueva']);
+        $r->add('GET',  'admin/recetas/editar',    ['PageController', 'adminRecetaEditar']);
+        $r->add('POST', 'admin/recetas/editar',    ['PageController', 'adminRecetaEditar']);
+        $r->add('GET',  'admin/recetas/ver',       ['PageController', 'adminRecetaVer']);
+        $r->add('POST', 'admin/recetas/eliminar',  ['PageController', 'adminRecetaEliminar']);
+
+        // ── Admin — Cambiar contraseñas ───────────────────────────────────────
+        $r->add('GET',  'admin/cambiar-contrasenas',      ['PageController', 'adminCambiarContrasenas']);
+        $r->add('POST', 'admin/cambiar-contrasenas-post', ['PageController', 'adminCambiarContrasenasPost']);
     }
 
     public function dispatch(): void

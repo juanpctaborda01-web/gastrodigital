@@ -15,6 +15,7 @@ $_tbRol     = $_SESSION['rol'] ?? '';
 $_tbNombre  = $_SESSION['usuario_nombre'] ?? '';
 $_tbEmail   = $_SESSION['usuario_email']  ?? '';
 $_tbInic    = strtoupper(substr($_tbNombre, 0, 1));
+$_tbAvatarUrl = urlAvatarPerfil($_SESSION['usuario_avatar'] ?? '');
 
 // Badge por defecto según rol
 if (!isset($topbarBadge)) {
@@ -62,11 +63,17 @@ if (!isset($topbarBadge)) {
       <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Campana (solo admin) -->
-    <?php if ($_tbRol === 'admin'): ?>
-    <button class="gd-topbar-bell" title="Notificaciones">
+    <?php if (isset($_SESSION['usuario_id'])): ?>
+    <a class="gd-topbar-bell position-relative"
+       href="<?= $_tbBase ?>/index.php?route=notificaciones"
+       title="Notificaciones" aria-label="Notificaciones">
       <i class="bi bi-bell"></i>
-    </button>
+      <?php if (!empty($notificacionesNoLeidas)): ?>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+          <?= $notificacionesNoLeidas > 99 ? '99+' : (int)$notificacionesNoLeidas ?>
+        </span>
+      <?php endif; ?>
+    </a>
     <?php endif; ?>
 
     <?php if (!empty($topbarAction)): ?>
@@ -80,7 +87,15 @@ if (!isset($topbarBadge)) {
     <!-- Usuario -->
     <?php if (isset($_SESSION['usuario_id'])): ?>
     <div class="gd-topbar-user">
-      <div class="gd-topbar-av"><?= $_tbInic ?></div>
+      <div class="gd-topbar-av">
+        <?php if ($_tbAvatarUrl): ?>
+          <img src="<?= htmlspecialchars($_tbAvatarUrl) ?>" alt="Avatar de <?= htmlspecialchars($_tbNombre) ?>"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span style="display:none"><?= htmlspecialchars($_tbInic) ?></span>
+        <?php else: ?>
+          <?= htmlspecialchars($_tbInic) ?>
+        <?php endif; ?>
+      </div>
       <div class="gd-topbar-user-info">
         <div class="gd-topbar-user-name"><?= htmlspecialchars($_tbNombre) ?></div>
         <div class="gd-topbar-user-role"><?= ucfirst($_tbRol) ?></div>

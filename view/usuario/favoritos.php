@@ -15,24 +15,23 @@ $icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
 
-<main class="py-5">
+<main class="pb-5">
 <div class="container">
 
-    <!-- ENCABEZADO -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-5">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--red),var(--red-d));display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(192,57,43,.3)">
-                <img src="<?= $icoAnim ?>heart.gif" alt="" style="width:28px;height:28px">
-            </div>
-            <div>
-                <h1 class="fw-800 mb-0" style="font-size:1.5rem">Mis Favoritos</h1>
-                <p class="text-muted mb-0 small">Tus recetas guardadas para volver a cocinarlas</p>
-            </div>
+    <!-- HERO UNIFICADO -->
+    <div class="gd-section-hero mt-3 mb-4">
+        <div class="gd-section-hero-body">
+            <span class="section-tag">
+                <i class="bi bi-heart-fill me-1"></i>Mi colección
+            </span>
+            <h1 class="gd-section-hero-title">Mis Favoritos</h1>
+            <p class="gd-section-hero-sub">
+                <?= count($favoritos) ?> receta<?= count($favoritos) !== 1 ? 's' : '' ?> guardadas para volver a cocinarlas
+            </p>
         </div>
-        <span class="badge rounded-pill px-3 py-2 fw-700"
-              style="background:rgba(192,57,43,.1);color:var(--red);font-size:.82rem">
-            <?= count($favoritos) ?> receta<?= count($favoritos) !== 1 ? 's' : '' ?>
-        </span>
+        <div class="gd-section-hero-art d-none d-md-block">
+            <img src="<?= $icoAnim ?>heart.gif" alt="" style="filter:none;opacity:.35">
+        </div>
     </div>
 
     <?php if (empty($favoritos)): ?>

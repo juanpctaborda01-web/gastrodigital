@@ -65,6 +65,29 @@ function hasRole(string $rol): bool {
     return isset($_SESSION['rol']) && $_SESSION['rol'] === $rol;
 }
 
+function urlAvatarPerfil(?string $avatar): ?string {
+    $avatar = trim((string)$avatar);
+    if ($avatar === '') {
+        return null;
+    }
+
+    if (filter_var($avatar, FILTER_VALIDATE_URL)) {
+        $scheme = strtolower((string)parse_url($avatar, PHP_URL_SCHEME));
+        return in_array($scheme, ['http', 'https'], true) ? $avatar : null;
+    }
+
+    $relativePath = ltrim(str_replace('\\', '/', $avatar), '/');
+    if (str_starts_with($relativePath, 'uploads/')) {
+        $relativePath = substr($relativePath, strlen('uploads/'));
+    }
+    $filename = basename($relativePath);
+    if ($filename === '' || !is_file(UPLOAD_PATH . $filename)) {
+        return null;
+    }
+
+    return UPLOAD_URL . rawurlencode($filename);
+}
+
 function requireLogin(): void {
     if (!isLoggedIn()) redirect('login');
 }

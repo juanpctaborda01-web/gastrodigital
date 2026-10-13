@@ -42,6 +42,7 @@ $baseUrl = rtrim(BASE_URL, '/');
     <link rel="stylesheet" href="<?= $baseUrl ?>/styles/auth.css?v=3.0">
 </head>
 <body class="auth-page">
+<?php include __DIR__ . '/../../assets/context_help.php'; ?>
 
 <div class="gd-auth-wrapper">
 
@@ -67,7 +68,7 @@ $baseUrl = rtrim(BASE_URL, '/');
                 </li>
                 <li>
                     <i class="bi bi-chat-dots-fill"></i>
-                    Chef Bot — asistente inteligente
+                    Chefbot — asistente inteligente
                 </li>
                 <li>
                     <i class="bi bi-star-fill"></i>

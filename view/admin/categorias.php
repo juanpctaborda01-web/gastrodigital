@@ -15,19 +15,32 @@ unset($_SESSION['exito'], $_SESSION['error']);
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
 
-<main class="py-5">
+<?php
+$topbarBadge      = 'Admin';
+$topbarBreadcrumb = [
+    ['label'=>'Panel','href'=> BASE_URL . '/admin'],
+    ['label'=>'Categorías'],
+];
+include __DIR__ . '/../../assets/topbar.php';
+?>
+
+<main class="pb-5">
 <div class="container">
 
-    <div class="mb-4">
-        <h2 class="fw-800 mb-0">Categorías</h2>
-        <p class="text-muted"><?= count($categorias) ?> categorías registradas</p>
-    </div>
+    <?php
+    $phTag     = 'Catálogo';
+    $phTagIcon = 'grid-3x3-gap-fill';
+    $phTitle   = 'Categorías';
+    $phSub     = count($categorias) . ' categorías registradas';
+    $phArt     = 'grid-3x3-gap-fill';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <?php if ($exito): ?>
-        <div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($exito) ?></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($exito) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
     <?php if ($error): ?>
-        <div class="alert alert-danger"><i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
 
     <div class="row g-4">

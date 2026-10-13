@@ -6,32 +6,78 @@
 /* ── Botón flotante ── */
 .chatbot-toggle {
     position: fixed;
-    bottom: 28px;
-    right: 28px;
-    width: 58px;
-    height: 58px;
+    bottom: 88px;   /* más alto para no tapar navegación inferior en móvil */
+    right: 22px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #e56a26, #f4ab2e);
+    background: linear-gradient(135deg, #3b2a1a 0%, #e56a26 60%, #f4ab2e 100%);
     border: none;
     color: #fff;
-    font-size: 1.5rem;
     cursor: pointer;
-    box-shadow: 0 6px 24px rgba(229,106,38,.45);
+    box-shadow: 0 6px 24px rgba(229,106,38,.5), 0 0 0 0 rgba(229,106,38,.35);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
-    transition: transform .25s ease, box-shadow .25s ease;
+    z-index: 9990;   /* por debajo de sidebar (z:1000) pero encima de contenido */
+    padding: 0;
+    overflow: hidden;
+    transition: transform .28s cubic-bezier(.34,1.56,.64,1),
+                box-shadow .25s ease;
+    animation: chatbot-pop-in .5s cubic-bezier(.34,1.56,.64,1) .8s both;
+}
+
+/* En desktop con sidebar visible, lo corremos para que no quede encima */
+@media (min-width: 1024px) {
+    .chatbot-toggle {
+        bottom: 32px;
+        right: 28px;
+    }
+    /* Cuando el sidebar está expandido (240px), el toggle se aleja más */
+    body.app-layout:not(.sb-is-collapsed) .chatbot-toggle {
+        right: 28px;
+    }
+}
+
+/* Imagen PNG del icono de Chefbot — id real es chatbotIconImg */
+.chatbot-toggle img#chatbotIconImg,
+.chatbot-toggle img#chatbotIcon {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    display: block;
+    filter: brightness(0) invert(1);
+    transition: transform .3s ease, opacity .2s ease;
+    flex-shrink: 0;
+}
+
+/* Ícono X al abrir */
+.chatbot-toggle i#chatbotIconX,
+.chatbot-toggle i#chatbotIcon {
+    font-size: 1.4rem;
+    line-height: 1;
+    display: block;
+    flex-shrink: 0;
 }
 
 .chatbot-toggle:hover {
-    transform: scale(1.1);
-    box-shadow: 0 8px 32px rgba(229,106,38,.55);
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 10px 32px rgba(229,106,38,.6);
+}
+
+.chatbot-toggle:hover img#chatbotIconImg,
+.chatbot-toggle:hover img#chatbotIcon {
+    transform: scale(1.08) rotate(-5deg);
 }
 
 /* Estado activo (chat abierto) */
 .chatbot-toggle.active {
     background: linear-gradient(135deg, #c85516, #e56a26);
+}
+
+/* Pulso de atención cuando hay mensajes nuevos */
+.chatbot-toggle.has-badge {
+    animation: chatbot-pulse 2s ease-in-out infinite;
 }
 
 /* Badge de mensajes no leídos */
@@ -321,12 +367,152 @@
     .chatbot-window {
         width: calc(100vw - 24px);
         right: 12px;
-        bottom: 90px;
-        max-height: 70vh;
+        bottom: 148px;   /* espacio para el toggle más alto */
+        max-height: 68vh;
     }
 
     .chatbot-toggle {
         right: 16px;
-        bottom: 20px;
+        bottom: 80px;    /* en móvil sube más para no tapar nav inferior */
+        width: 52px;
+        height: 52px;
     }
+}
+
+/* =============================================
+   Chefbot — Estilos adicionales (integración Ollama)
+   Agregados sobre el CSS base existente
+   ============================================= */
+
+/* ── Botón de acción en el header (limpiar) ── */
+.chatbot-action-btn {
+    background: rgba(255,255,255,.1);
+    border: none;
+    color: rgba(255,255,255,.7);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: .78rem;
+    transition: background .2s, color .2s;
+}
+
+.chatbot-action-btn:hover {
+    background: rgba(255,255,255,.22);
+    color: #fff;
+}
+
+/* ── Textarea (reemplaza al <input> anterior) ── */
+.chatbot-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: .875rem;
+    font-family: 'Nunito', sans-serif;
+    color: #2d1f0e;
+    resize: none;
+    line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.chatbot-input::placeholder { color: #8a7060; }
+
+/* ── Meta fila bajo el input (contador + powered by) ── */
+.chatbot-input-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .2rem .1rem 0;
+}
+
+.char-count {
+    font-size: .68rem;
+    color: #a08070;
+    font-family: 'Nunito', sans-serif;
+}
+
+.char-count--warn { color: #c0392b; font-weight: 700; }
+
+.chatbot-powered {
+    font-size: .68rem;
+    color: #b09070;
+    font-family: 'Nunito', sans-serif;
+}
+
+.chatbot-powered strong { color: #e56a26; }
+
+/* ── Badge de tipo de respuesta ── */
+.chat-tipo-badge {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: .18rem .55rem;
+    border-radius: 12px;
+    margin-bottom: .4rem;
+    letter-spacing: .01em;
+}
+
+.chat-tipo-oficial {
+    background: #edf7e6;
+    color: #27ae60;
+    border: 1px solid #a9dfb3;
+}
+
+.chat-tipo-error {
+    background: #fdecea;
+    color: #c0392b;
+    border: 1px solid #f5b5b0;
+}
+
+/* ── Código inline en burbujas ── */
+.chat-bubble code {
+    background: #f0e8de;
+    color: #c0392b;
+    padding: .1em .35em;
+    border-radius: 4px;
+    font-size: .82em;
+    font-family: 'Courier New', monospace;
+}
+
+/* ── Listas dentro de burbujas ── */
+.chat-bubble ul {
+    margin: .4rem 0 .2rem 1rem;
+    padding: 0;
+    list-style: disc;
+}
+
+.chat-bubble ul li {
+    margin-bottom: .2rem;
+    font-size: .875rem;
+    line-height: 1.45;
+}
+
+/* ── Estado deshabilitado durante carga ── */
+.chatbot-send:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.chatbot-input:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* ── Animación de entrada del toggle al cargar la página ── */
+@keyframes chatbot-pop-in {
+    0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+    70%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.chatbot-toggle {
+    animation: chatbot-pop-in .5s cubic-bezier(.34,1.56,.64,1) .8s both;
 }

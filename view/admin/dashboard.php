@@ -15,6 +15,7 @@ $userId       = (int)($_SESSION['usuario_id'] ?? 0);
 $perfil       = $userModel->buscarPorId($userId) ?: [];
 $perfilNombre = $perfil['nombre'] ?? $nombre;
 $perfilAvatar = $perfil['avatar'] ?? '';
+$perfilAvatarUrl = urlAvatarPerfil($perfilAvatar);
 $perfilBio    = $perfil['bio'] ?? '';
 $perfilRedes  = $perfil['redes_sociales'] ?? '';
 $exito        = $_SESSION['exito'] ?? null;
@@ -206,9 +207,16 @@ include __DIR__ . '/../../assets/topbar.php';
         <div class="card-body">
             <div class="row g-4 align-items-center">
                 <div class="col-md-3 text-center">
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-800 mb-3"
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-800 mb-3 overflow-hidden"
                          style="width:76px;height:76px;background:linear-gradient(135deg,var(--primary),var(--secondary));font-size:1.8rem">
-                        <?= strtoupper(substr($perfilNombre, 0, 1)) ?>
+                        <?php if ($perfilAvatarUrl): ?>
+                            <img src="<?= htmlspecialchars($perfilAvatarUrl) ?>" alt="Avatar de <?= htmlspecialchars($perfilNombre) ?>"
+                                 style="width:100%;height:100%;object-fit:cover"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                            <span style="display:none"><?= htmlspecialchars(strtoupper(substr($perfilNombre, 0, 1))) ?></span>
+                        <?php else: ?>
+                            <?= htmlspecialchars(strtoupper(substr($perfilNombre, 0, 1))) ?>
+                        <?php endif; ?>
                     </div>
                     <h5 class="fw-800 mb-1"><?= htmlspecialchars($perfilNombre) ?></h5>
                     <p class="text-muted small mb-0">Administrador · Gestión del contenido</p>
@@ -499,6 +507,14 @@ include __DIR__ . '/../../assets/topbar.php';
                             <div>
                                 <div class="fw-700">Categorías</div>
                                 <small class="text-muted fw-400">Crear · eliminar</small>
+                            </div>
+                        </a>
+                        <a href="<?= BASE_URL ?>/index.php?route=admin/recetas"
+                           class="btn btn-outline-primary btn-sm text-start d-flex align-items-center gap-2">
+                            <i class="bi bi-egg-fried fs-5" style="color:var(--primary)"></i>
+                            <div>
+                                <div class="fw-700">Gestionar recetas</div>
+                                <small class="text-muted fw-400">Crear · editar · eliminar</small>
                             </div>
                         </a>
                         <a href="<?= BASE_URL ?>/index.php?route=admin/reportes&tipo=recetas"

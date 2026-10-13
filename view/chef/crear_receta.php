@@ -27,7 +27,7 @@ unset($_SESSION['error']);
     <?php endif; ?>
 
     <form method="POST"
-          action="<?= BASE_URL ?>/controllers/RecetaController.php?accion=crear"
+          action="<?= BASE_URL ?>/index.php?route=crear-receta"
           enctype="multipart/form-data">
         <?php csrfField(); ?>
 
@@ -143,8 +143,44 @@ unset($_SESSION['error']);
             </div>
         </div>
 
+        <!-- Publicación -->
+        <div class="card mb-4" style="border-radius:14px;border:2px solid rgba(232,168,56,.2)">
+            <div class="card-body">
+                <h5 class="fw-700 mb-3">
+                    <i class="bi bi-globe me-2" style="color:var(--primary)"></i>Publicación
+                </h5>
+                <p class="text-muted small mb-3">Elige si quieres publicar la receta ahora o guardarla como borrador para terminarla más tarde.</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <label class="pub-option d-flex align-items-center gap-3 p-3 rounded-3 border flex-grow-1"
+                           style="cursor:pointer;transition:all .18s" id="optPublicar">
+                        <input type="radio" name="publicada" value="1" class="visually-hidden" checked>
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                              style="width:40px;height:40px;background:rgba(46,204,113,.12)">
+                            <i class="bi bi-check-circle-fill" style="color:#1a8a44;font-size:1.2rem"></i>
+                        </span>
+                        <div>
+                            <div class="fw-700" style="font-size:.92rem">Publicar ahora</div>
+                            <div class="text-muted" style="font-size:.78rem">Visible para todos los usuarios</div>
+                        </div>
+                    </label>
+                    <label class="pub-option d-flex align-items-center gap-3 p-3 rounded-3 border flex-grow-1"
+                           style="cursor:pointer;transition:all .18s" id="optBorrador">
+                        <input type="radio" name="publicada" value="0" class="visually-hidden">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                              style="width:40px;height:40px;background:rgba(232,168,56,.12)">
+                            <i class="bi bi-pencil-square" style="color:#8a5e00;font-size:1.2rem"></i>
+                        </span>
+                        <div>
+                            <div class="fw-700" style="font-size:.92rem">Guardar como borrador</div>
+                            <div class="text-muted" style="font-size:.78rem">Solo visible para ti, puedes publicarla después</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <div class="d-flex gap-3 pb-4">
-            <button type="submit" class="btn btn-primary px-4">
+            <button type="submit" class="btn btn-primary px-4" id="btnSubmitCrear">
                 <i class="bi bi-cloud-upload me-2"></i>Publicar receta
             </button>
             <a href="<?= BASE_URL ?>/mis-recetas" class="btn btn-outline-secondary">Cancelar</a>
@@ -181,6 +217,32 @@ document.addEventListener('click', e => {
     if (e.target.closest('.btn-remove-ing'))  e.target.closest('.ingrediente-row').remove();
     if (e.target.closest('.btn-remove-paso')) e.target.closest('.paso-row').remove();
 });
+
+// ── Toggle visual de opciones de publicación ──
+(function () {
+    const radios = document.querySelectorAll('input[name="publicada"]');
+    const labels = document.querySelectorAll('.pub-option');
+    const btnSubmit = document.getElementById('btnSubmitCrear');
+
+    function updatePubUI() {
+        radios.forEach((r, i) => {
+            labels[i].style.borderColor = r.checked ? (r.value === '1' ? 'rgba(46,204,113,.5)' : 'rgba(232,168,56,.5)') : 'var(--border)';
+            labels[i].style.background  = r.checked ? (r.value === '1' ? 'rgba(46,204,113,.06)' : 'rgba(232,168,56,.06)') : '';
+        });
+        const pub = document.querySelector('input[name="publicada"]:checked').value === '1';
+        if (btnSubmit) {
+            btnSubmit.innerHTML = pub
+                ? '<i class="bi bi-cloud-upload me-2"></i>Publicar receta'
+                : '<i class="bi bi-pencil-square me-2"></i>Guardar borrador';
+        }
+    }
+    radios.forEach(r => r.addEventListener('change', updatePubUI));
+    labels.forEach(lbl => lbl.addEventListener('click', () => {
+        const r = lbl.querySelector('input[type="radio"]');
+        if (r) { r.checked = true; updatePubUI(); }
+    }));
+    updatePubUI();
+})();
 </script>
 
 <?php include __DIR__ . '/../../assets/fooder.php'; ?>

@@ -56,6 +56,7 @@ class AuthController {
         $_SESSION['usuario_id']     = $usuario['id'];
         $_SESSION['usuario_nombre'] = $usuario['nombre'];
         $_SESSION['usuario_email']  = $usuario['email'];
+        $_SESSION['usuario_avatar'] = $usuario['avatar'] ?? '';
         $_SESSION['rol']            = $usuario['rol'];
 
         // Recordar sesión: guardar cookie si el usuario lo pidió

@@ -15,6 +15,7 @@ $rol       = $perfil['rol']      ?? ($_SESSION['rol'] ?? 'usuario');
 $redes     = $perfil['redes_sociales'] ?? '';
 $espec     = $perfil['especialidad']   ?? '';
 $iniciales = strtoupper(substr($nombre, 0, 1));
+$avatarUrl = urlAvatarPerfil($avatar);
 
 $exito = $_SESSION['exito'] ?? null;
 $error = $_SESSION['error'] ?? null;
@@ -36,8 +37,24 @@ $rc = $rolColors[$rol] ?? $rolColors['usuario'];
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
 
-<main class="py-5">
+<main class="pb-5">
 <div class="container">
+
+<!-- Hero unificado -->
+<div class="gd-section-hero mt-3 mb-4">
+    <div class="gd-section-hero-body">
+        <span class="section-tag"><i class="bi bi-person-circle me-1"></i>Mi cuenta</span>
+        <h1 class="gd-section-hero-title">Mi Perfil</h1>
+        <p class="gd-section-hero-sub">
+            <?= htmlspecialchars($nombre) ?> ·
+            <span style="text-transform:capitalize"><?= htmlspecialchars($rol) ?></span>
+        </p>
+    </div>
+    <div class="gd-section-hero-art d-none d-md-block">
+        <i class="bi bi-person-badge-fill" style="font-size:4rem;opacity:.28;color:#fff"></i>
+    </div>
+</div>
+
 <div class="row justify-content-center">
 <div class="col-lg-9">
 
@@ -67,8 +84,8 @@ $rc = $rolColors[$rol] ?? $rolColors['usuario'];
             <!-- ── Columna avatar ── -->
             <div class="perfil-avatar-col">
                 <div class="perfil-avatar-wrap" id="avatarWrap">
-                    <?php if ($avatar && (str_starts_with($avatar, 'http') || file_exists(ROOT_PATH . '/uploads/' . $avatar))): ?>
-                        <img src="<?= str_starts_with($avatar, 'http') ? htmlspecialchars($avatar) : BASE_URL . '/uploads/' . htmlspecialchars($avatar) ?>"
+                    <?php if ($avatarUrl): ?>
+                        <img src="<?= htmlspecialchars($avatarUrl) ?>"
                              alt="Avatar" class="perfil-avatar-img" id="avatarPreview">
                     <?php else: ?>
                         <div class="perfil-avatar-initials" id="avatarPreview"><?= $iniciales ?></div>

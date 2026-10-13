@@ -12,18 +12,24 @@ $icoBase    = $baseUrl . '/img/Icon/Categorias/';
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
 
-<main class="py-5">
+<main class="pb-5">
 <div class="container">
 
-    <!-- ENCABEZADO -->
-    <div class="text-center mb-5">
-        <span class="section-tag">
-            <i class="bi bi-grid-3x3-gap me-1"></i>Catálogo
-        </span>
-        <h1 class="section-title">Categorías Gastronómicas</h1>
-        <p class="section-subtitle">
-            Descubre recetas por tipo de plato, ocasión o ingrediente principal
-        </p>
+    <!-- HERO SECCIÓN -->
+    <div class="gd-section-hero mb-4">
+        <div class="gd-section-hero-body">
+            <span class="section-tag">
+                <i class="bi bi-grid-3x3-gap me-1"></i>Catálogo
+            </span>
+            <h1 class="gd-section-hero-title">Categorías Gastronómicas</h1>
+            <p class="gd-section-hero-sub">
+                <?= count($categorias) ?> categoría<?= count($categorias) != 1 ? 's' : '' ?> ·
+                Descubre recetas por tipo de plato, ocasión o ingrediente
+            </p>
+        </div>
+        <div class="gd-section-hero-art d-none d-md-block">
+            <img src="<?= $icoBase ?>plato-principal.png" alt="">
+        </div>
     </div>
 
     <?php if (empty($categorias)): ?>
