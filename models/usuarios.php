@@ -188,6 +188,28 @@ class Usuario {
         return $result;
     }
 
+    // Resumen de usuarios para dashboards: evita hacer varias consultas separadas
+    public function dashboardStats(): array {
+        $stmt = $this->pdo->query("
+            SELECT
+                COUNT(*) AS total_usuarios,
+                SUM(CASE WHEN rol = 'admin' THEN 1 ELSE 0 END) AS admin,
+                SUM(CASE WHEN rol = 'chef' THEN 1 ELSE 0 END) AS chef,
+                SUM(CASE WHEN rol = 'usuario' THEN 1 ELSE 0 END) AS usuario,
+                SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS nuevos_30
+            FROM usuarios
+        ");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        return [
+            'total_usuarios' => (int)($row['total_usuarios'] ?? 0),
+            'admin' => (int)($row['admin'] ?? 0),
+            'chef' => (int)($row['chef'] ?? 0),
+            'usuario' => (int)($row['usuario'] ?? 0),
+            'nuevos_30' => (int)($row['nuevos_30'] ?? 0),
+        ];
+    }
+
     // Total de usuarios nuevos en los últimos N días
     public function totalNuevosEnDias(int $dias = 30): int {
         $stmt = $this->pdo->prepare("

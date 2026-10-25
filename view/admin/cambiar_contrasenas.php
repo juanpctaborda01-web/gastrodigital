@@ -54,19 +54,14 @@ include __DIR__ . '/../../assets/topbar.php';
 <main class="pb-5">
 <div class="container" style="max-width:860px">
 
-    <!-- Hero -->
-    <div class="gd-section-hero mt-3 mb-4">
-        <div class="gd-section-hero-body">
-            <span class="section-tag"><i class="bi bi-shield-lock me-1"></i>Seguridad</span>
-            <h1 class="gd-section-hero-title">Cambiar contraseñas</h1>
-            <p class="gd-section-hero-sub">
-                El administrador puede cambiar la contraseña de cualquier usuario.
-            </p>
-        </div>
-        <div class="gd-section-hero-art d-none d-md-block">
-            <i class="bi bi-key-fill" style="font-size:4rem;opacity:.28;color:#fff"></i>
-        </div>
-    </div>
+    <?php
+    $phTag     = 'Seguridad';
+    $phTagImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/cheque.png';
+    $phTitle   = 'Cambiar contraseñas';
+    $phSub     = 'El administrador puede cambiar la contraseña de cualquier usuario.';
+    $phArtImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/profile.gif';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <!-- Alertas flash -->
     <?php if ($exito): ?>

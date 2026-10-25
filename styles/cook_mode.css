@@ -1,0 +1,1669 @@
+/*
+ * cook_mode.css — Modo Cocinar GastroDigital
+ * Todos los selectores usan el prefijo .cm- para evitar colisiones con main.css.
+ * Se aplica únicamente cuando el <main id="cookModeApp"> está en el DOM.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   1. LAYOUT PRINCIPAL
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-main {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    background: var(--cream);
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. CABECERA FIJA DEL MODO COCINAR
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-header {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: linear-gradient(135deg, #2e1a0a 0%, #4a2410 100%);
+    box-shadow: 0 2px 16px rgba(0,0,0,.22);
+    flex-shrink: 0;
+}
+
+.cm-header-inner {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 1.25rem;
+    min-height: 52px;
+}
+
+.cm-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    color: rgba(255,255,255,.82);
+    font-size: .85rem;
+    font-weight: 700;
+    text-decoration: none;
+    padding: .35rem .6rem;
+    border-radius: 8px;
+    transition: background .18s, color .18s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.cm-back-link:hover,
+.cm-back-link:focus-visible {
+    background: rgba(255,255,255,.1);
+    color: #fff;
+    outline: 2px solid rgba(255,255,255,.4);
+    outline-offset: 1px;
+}
+
+.cm-fire-icon {
+    color: var(--secondary);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.cm-header-title {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.cm-recipe-name {
+    color: #fff;
+    font-weight: 800;
+    font-size: clamp(.82rem, 2.5vw, 1rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cm-header-progress {
+    flex-shrink: 0;
+}
+
+.cm-step-counter {
+    color: var(--secondary);
+    font-size: .8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Barra de progreso global */
+.cm-progress-bar-wrap {
+    height: 4px;
+    background: rgba(255,255,255,.12);
+    overflow: hidden;
+}
+
+.cm-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    transition: width .45s cubic-bezier(.4,0,.2,1);
+    will-change: width;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3. PANTALLAS (SCREENS)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-screen {
+    display: none;
+    flex: 1;
+    animation: cmFadeIn .25s ease;
+}
+.cm-screen--active {
+    display: flex;
+    flex-direction: column;
+}
+@keyframes cmFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Respetar preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+    .cm-screen, .cm-paso-card, .cm-progress-bar-fill { animation: none; transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. PANTALLA DE INGREDIENTES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-screen-inner {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.cm-phase-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .3rem .8rem;
+    border-radius: 20px;
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.cm-phase-title {
+    font-size: clamp(1.35rem, 4vw, 1.75rem);
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.25;
+    margin: 0;
+}
+
+.cm-phase-sub {
+    color: var(--text-m);
+    font-size: .95rem;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Contador de ingredientes */
+.cm-ing-counter {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: .65rem 1rem;
+    flex-wrap: wrap;
+}
+
+.cm-ing-mini-bar {
+    flex: 1;
+    min-width: 60px;
+    height: 6px;
+    background: var(--surface-3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.cm-ing-mini-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 3px;
+    transition: width .35s ease;
+}
+
+/* Lista de ingredientes */
+.cm-ing-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.cm-ing-item {
+    border-radius: 12px;
+    transition: background .15s;
+}
+
+.cm-ing-label {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem 1rem;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color .18s, background .18s, box-shadow .18s;
+    user-select: none;
+}
+.cm-ing-label:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(211,84,0,.1);
+}
+.cm-ing-label:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Estado: marcado */
+.cm-ing-item.is-checked .cm-ing-label {
+    background: linear-gradient(135deg, #fff8f0, #fdf0e0);
+    border-color: var(--primary);
+}
+.cm-ing-item.is-checked .cm-ing-nombre {
+    text-decoration: line-through;
+    color: var(--text-m);
+}
+
+/* Check box visual */
+.cm-ing-check-wrap {
+    flex-shrink: 0;
+}
+
+.cm-ing-check-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: transparent;
+    transition: background .18s, border-color .18s, color .18s;
+    font-size: 1rem;
+}
+
+.cm-ing-item.is-checked .cm-ing-check-box {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.cm-ing-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .35rem .65rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.cm-ing-nombre {
+    font-weight: 700;
+    color: var(--text);
+    font-size: .92rem;
+    transition: color .18s;
+}
+
+.cm-ing-cantidad {
+    font-size: .78rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--primary);
+    padding: .15rem .5rem;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.cm-ing-opcional {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-m);
+    background: var(--surface-3);
+    padding: .1rem .45rem;
+    border-radius: 20px;
+    font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. CONSEJOS CONTEXTUALES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .85rem 1rem;
+    border-radius: 12px;
+    font-size: .875rem;
+    line-height: 1.55;
+}
+
+.cm-tip i {
+    flex-shrink: 0;
+    font-size: 1rem;
+    margin-top: .1rem;
+}
+
+.cm-tip--info {
+    background: linear-gradient(135deg, #fff8e6, #fff3d9);
+    border: 1px solid #f4d485;
+    color: #7a5c1a;
+}
+.cm-tip--info i { color: var(--secondary); }
+
+.cm-tip--step {
+    background: linear-gradient(135deg, #fff4f0, #fde8df);
+    border: 1px solid #f5b99a;
+    color: #7a3a1a;
+}
+.cm-tip--step i { color: var(--primary); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6. BOTONES GENERALES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: .92rem;
+    padding: .6rem 1.25rem;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: background .18s, color .18s, border-color .18s, box-shadow .18s, transform .1s;
+    text-decoration: none;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+.cm-btn:focus-visible {
+    outline: 3px solid var(--secondary);
+    outline-offset: 2px;
+}
+.cm-btn:active {
+    transform: scale(.97);
+}
+
+.cm-btn--primary {
+    background: linear-gradient(135deg, var(--primary), #b84700);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(211,84,0,.3);
+}
+.cm-btn--primary:hover {
+    background: linear-gradient(135deg, #b84700, var(--primary));
+    box-shadow: 0 6px 20px rgba(211,84,0,.4);
+    color: #fff;
+}
+
+.cm-btn--secondary {
+    background: linear-gradient(135deg, var(--secondary), var(--gold-d));
+    color: var(--dark);
+    border-color: transparent;
+}
+.cm-btn--secondary:hover {
+    background: linear-gradient(135deg, var(--gold-d), var(--secondary));
+    color: var(--dark);
+}
+
+.cm-btn--outline {
+    background: transparent;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.cm-btn--outline:hover {
+    background: rgba(211,84,0,.06);
+    color: var(--primary);
+}
+
+.cm-btn--lg {
+    padding: .85rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 14px;
+}
+
+.cm-btn--block {
+    width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   7. LAYOUT DE PASOS (ESCRITORIO + MÓVIL)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-pasos-layout {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    min-height: 0;
+}
+
+/* Columna principal del paso */
+.cm-paso-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1.25rem 2rem;
+    min-width: 0;
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+/* Sidebar ingredientes (desktop) */
+.cm-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: #fff;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: sticky;
+    top: 60px;
+    max-height: calc(100vh - 60px);
+}
+
+@media (max-width: 900px) {
+    .cm-sidebar { display: none; }
+}
+
+.cm-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .9rem 1rem;
+    font-weight: 800;
+    font-size: .88rem;
+    color: var(--text);
+    background: var(--surface-3);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.cm-sidebar-counter {
+    margin-left: auto;
+    font-size: .75rem;
+    background: var(--primary);
+    color: #fff;
+    padding: .15rem .5rem;
+    border-radius: 20px;
+    font-weight: 700;
+}
+
+.cm-sidebar-list {
+    list-style: none;
+    padding: .5rem 0;
+    margin: 0;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.cm-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 1rem;
+    font-size: .82rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--surface-3);
+    transition: background .15s;
+}
+.cm-sidebar-item.is-checked {
+    color: var(--text-m);
+}
+.cm-sidebar-item.is-checked .cm-sidebar-ing-nombre {
+    text-decoration: line-through;
+}
+
+.cm-sidebar-check i {
+    font-size: .9rem;
+    color: var(--border);
+    transition: color .18s;
+}
+.cm-sidebar-item.is-checked .cm-sidebar-check i {
+    color: var(--primary);
+}
+/* Reemplazar icono en el sidebar */
+.cm-sidebar-item.is-checked .cm-sidebar-check i::before {
+    content: "\f26b"; /* bi-check-circle-fill */
+}
+
+.cm-sidebar-ing-nombre {
+    flex: 1;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cm-sidebar-ing-cant {
+    font-size: .72rem;
+    color: var(--text-m);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   8. INDICADOR DE PASO
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-paso-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: .75rem;
+}
+
+.cm-paso-num-label {
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--text-m);
+}
+
+.cm-mini-ing-toggle {
+    display: none; /* visible solo en móvil */
+    align-items: center;
+    gap: .35rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .35rem .7rem;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s;
+}
+.cm-mini-ing-toggle:hover { background: var(--surface-3); }
+.cm-mini-ing-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+@media (max-width: 900px) {
+    .cm-mini-ing-toggle { display: inline-flex; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   9. TARJETA DEL PASO ACTUAL
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-paso-card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    transition: box-shadow .2s;
+    position: relative;
+    overflow: hidden;
+}
+.cm-paso-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+/* Imagen del paso */
+.cm-paso-img-wrap {
+    margin: -.75rem -1.75rem 0;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    max-height: 260px;
+}
+.cm-paso-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Número circular grande */
+.cm-paso-numero-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+/* Descripción */
+.cm-paso-body {
+    flex: 1;
+}
+
+.cm-paso-desc {
+    font-size: clamp(1rem, 2.5vw, 1.12rem);
+    color: var(--text);
+    line-height: 1.75;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   10. TEMPORIZADOR
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-timer {
+    background: linear-gradient(135deg, #fff8f0, #fdf0e0);
+    border: 1.5px solid #f5c8a0;
+    border-radius: 16px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+}
+
+.cm-timer-header {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.cm-timer-header i {
+    color: var(--primary);
+    font-size: 1rem;
+}
+.cm-timer-title {
+    flex: 1;
+}
+.cm-timer-duration {
+    font-size: .78rem;
+    color: var(--text-m);
+    background: var(--surface-3);
+    padding: .15rem .55rem;
+    border-radius: 20px;
+}
+
+.cm-timer-display {
+    text-align: center;
+    padding: .25rem 0;
+}
+
+.cm-timer-digits {
+    font-size: clamp(2.5rem, 8vw, 3.5rem);
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+    transition: color .3s;
+}
+.cm-timer-digits.is-warning { color: #c0392b; }
+.cm-timer-digits.is-done    { color: var(--secondary); }
+
+.cm-timer-controls {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+}
+
+.cm-btn--timer {
+    background: var(--primary);
+    color: #fff;
+    border-color: transparent;
+    flex: 1;
+    min-width: 90px;
+    padding: .55rem .8rem;
+    font-size: .85rem;
+}
+.cm-btn--timer:hover {
+    background: #b84700;
+    color: #fff;
+}
+.cm-btn--timer-pause {
+    background: var(--secondary);
+    color: var(--dark);
+}
+.cm-btn--timer-pause:hover {
+    background: var(--gold-d);
+    color: var(--dark);
+}
+.cm-btn--timer-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-m);
+    padding: .55rem .8rem;
+    font-size: .85rem;
+    flex-shrink: 0;
+}
+.cm-btn--timer-ghost:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+
+/* Notificación tiempo agotado */
+.cm-timer-done {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: linear-gradient(135deg, #ffeee6, #ffddd0);
+    border: 1px solid #f5a080;
+    border-radius: 10px;
+    padding: .65rem .9rem;
+    font-size: .85rem;
+    font-weight: 700;
+    color: #8a2800;
+    animation: cmPulse 1.2s ease-in-out 3;
+}
+@keyframes cmPulse {
+    0%, 100% { transform: scale(1);    opacity: 1; }
+    50%       { transform: scale(1.02); opacity: .9; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-timer-done { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   11. FILA DE COMPLETADO Y NAVEGACIÓN
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-paso-done-row {
+    display: flex;
+    justify-content: center;
+    margin-top: .5rem;
+}
+
+.cm-btn--check {
+    background: var(--surface-2);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: .6rem 1.25rem;
+    font-size: .9rem;
+    border-radius: 12px;
+    transition: background .18s, border-color .18s, color .18s;
+    gap: .5rem;
+}
+.cm-btn--check:hover {
+    background: var(--surface-3);
+    border-color: var(--primary);
+}
+.cm-btn--check.is-checked {
+    background: linear-gradient(135deg, var(--primary), #b84700);
+    border-color: transparent;
+    color: #fff;
+}
+.cm-btn--check.is-checked:hover {
+    background: linear-gradient(135deg, #b84700, var(--primary));
+}
+
+/* Navegación Anterior / Siguiente */
+.cm-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.cm-btn--nav {
+    min-width: 120px;
+    padding: .75rem 1.1rem;
+    font-size: .92rem;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    gap: .4rem;
+    transition: background .18s, border-color .18s, color .18s, box-shadow .18s;
+}
+.cm-btn--nav:hover:not(:disabled) {
+    background: var(--surface-2);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.cm-btn--nav:disabled {
+    opacity: .38;
+    cursor: not-allowed;
+}
+.cm-btn--nav:focus-visible {
+    outline: 3px solid var(--secondary);
+    outline-offset: 2px;
+}
+
+.cm-btn--next:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary), #b84700);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(211,84,0,.25);
+}
+.cm-btn--next:not(:disabled):hover {
+    box-shadow: 0 6px 20px rgba(211,84,0,.35);
+    color: #fff;
+    background: linear-gradient(135deg, #b84700, var(--primary));
+}
+
+/* Puntos de paso */
+.cm-step-dots {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    flex: 1;
+    max-width: 300px;
+}
+
+.cm-step-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+.cm-step-dot:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+}
+.cm-step-dot.is-current {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: scale(1.35);
+}
+.cm-step-dot.is-done {
+    background: var(--secondary);
+    border-color: var(--secondary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   12. PANEL INGREDIENTES MÓVIL (OVERLAY)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-mini-ing-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    background: #fff;
+    border-top: 2px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    max-height: 65vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 32px rgba(0,0,0,.14);
+    animation: cmSlideUp .22s ease;
+}
+@keyframes cmSlideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0);    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-mini-ing-panel { animation: none; }
+}
+
+.cm-mini-ing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .9rem 1.25rem;
+    font-weight: 800;
+    font-size: .92rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.cm-mini-close {
+    background: var(--surface-2);
+    border: none;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text);
+    font-size: .95rem;
+    transition: background .15s;
+}
+.cm-mini-close:hover { background: var(--surface-3); }
+.cm-mini-close:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.cm-mini-ing-list {
+    list-style: none;
+    padding: .5rem 0;
+    margin: 0;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+}
+
+.cm-mini-ing-item {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .65rem 1.25rem;
+    font-size: .88rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--surface-2);
+    transition: background .12s;
+}
+.cm-mini-ing-item.is-checked {
+    color: var(--text-m);
+    text-decoration: line-through;
+    background: var(--surface-2);
+}
+.cm-mini-ing-icon { font-size: .9rem; color: var(--border); }
+.cm-mini-ing-item.is-checked .cm-mini-ing-icon { color: var(--primary); }
+.cm-mini-ing-cant {
+    margin-left: auto;
+    font-size: .75rem;
+    color: var(--text-m);
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   13. PANTALLA FINAL
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-fin-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    gap: 1.5rem;
+    max-width: 560px;
+    margin: 0 auto;
+    flex: 1;
+}
+
+/* Animación de trofeo */
+.cm-fin-anim {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+}
+
+.cm-fin-circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    color: #fff;
+    box-shadow: 0 8px 32px rgba(211,84,0,.35);
+    animation: cmBounce .5s cubic-bezier(.3,1.5,.5,1) both;
+}
+@keyframes cmBounce {
+    from { transform: scale(.4); opacity: 0; }
+    to   { transform: scale(1);  opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-fin-circle { animation: none; }
+}
+
+/* Partículas decorativas */
+.cm-fin-sparkles {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+}
+.cm-fin-sparkles span {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--secondary);
+    animation: cmSparkle 1.2s ease-out both;
+}
+.cm-fin-sparkles span:nth-child(1) { top:  5%; left: 50%; animation-delay: .1s; }
+.cm-fin-sparkles span:nth-child(2) { top: 20%; left: 85%; animation-delay: .2s; background: var(--primary); }
+.cm-fin-sparkles span:nth-child(3) { top: 60%; left: 90%; animation-delay: .15s; }
+.cm-fin-sparkles span:nth-child(4) { top: 80%; left: 50%; animation-delay: .25s; background: var(--accent); }
+.cm-fin-sparkles span:nth-child(5) { top: 60%; left: 10%; animation-delay: .18s; }
+.cm-fin-sparkles span:nth-child(6) { top: 20%; left: 15%; animation-delay: .08s; background: var(--primary); }
+@keyframes cmSparkle {
+    0%   { transform: scale(0) translate(0,0); opacity: 1; }
+    100% { transform: scale(1.5) translate(var(--dx,15px), var(--dy,-30px)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-fin-sparkles span { animation: none; opacity: 0; }
+}
+
+.cm-fin-title {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.cm-fin-sub {
+    font-size: 1rem;
+    color: var(--text-m);
+    margin: 0;
+    line-height: 1.65;
+    max-width: 400px;
+}
+
+.cm-fin-stats {
+    display: flex;
+    gap: 1.25rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    width: 100%;
+}
+
+.cm-fin-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+    min-width: 80px;
+}
+
+.cm-fin-stat-val {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.cm-fin-stat-lbl {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-m);
+    text-align: center;
+}
+
+.cm-fin-actions {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   14. EMPTY STATE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cm-empty-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding: 2.5rem 1rem;
+    background: var(--surface-2);
+    border: 1.5px dashed var(--border);
+    border-radius: 16px;
+    color: var(--text-m);
+    text-align: center;
+    font-size: .92rem;
+}
+.cm-empty-box i {
+    font-size: 2.5rem;
+    opacity: .35;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   15. RESPONSIVE AJUSTES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 576px) {
+    .cm-paso-card {
+        padding: 1.25rem;
+        border-radius: 16px;
+    }
+    .cm-paso-img-wrap {
+        margin: -.5rem -1.25rem 0;
+    }
+    .cm-paso-numero-badge {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    .cm-nav {
+        gap: .5rem;
+    }
+    .cm-btn--nav {
+        min-width: 90px;
+        padding: .65rem .85rem;
+        font-size: .85rem;
+    }
+    .cm-step-dots { display: none; }
+    .cm-fin-actions {
+        flex-direction: column;
+    }
+    .cm-fin-actions .cm-btn {
+        width: 100%;
+    }
+    .cm-back-text { display: none; }
+}
+
+@media (min-width: 901px) {
+    .cm-paso-main {
+        padding: 2rem 2.5rem 2.5rem;
+    }
+    .cm-pasos-layout {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   16. DARK MODE (hereda los tokens del proyecto si existen)
+   ═══════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .cm-header {
+    background: linear-gradient(135deg, #1a0d04 0%, #2a1208 100%);
+}
+[data-theme="dark"] .cm-paso-card,
+[data-theme="dark"] .cm-sidebar,
+[data-theme="dark"] .cm-mini-ing-panel {
+    background: #1e1208;
+    border-color: rgba(255,255,255,.1);
+}
+[data-theme="dark"] .cm-ing-label {
+    background: #1e1208;
+    border-color: rgba(255,255,255,.12);
+}
+[data-theme="dark"] .cm-ing-item.is-checked .cm-ing-label {
+    background: #2a1a0a;
+}
+[data-theme="dark"] .cm-ing-check-box {
+    background: #2a1a0a;
+}
+[data-theme="dark"] .cm-timer {
+    background: linear-gradient(135deg, #2a1a0a, #1e1208);
+    border-color: rgba(255,255,255,.1);
+}
+[data-theme="dark"] .cm-btn--nav {
+    background: #1e1208;
+    border-color: rgba(255,255,255,.12);
+    color: rgba(255,255,255,.82);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   17. CHEFBOT INLINE — Panel de asistente integrado en el Modo Cocinar
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Ocultar el botón flotante global del ChefBot en el Modo Cocinar,
+   para no duplicar con el panel inline. */
+#cookModeApp ~ .chatbot-toggle,
+#cookModeApp ~ #chatbotWindow {
+    display: none !important;
+}
+
+/* ── Botón indicador: fila de acciones ──────────────────────── */
+.cm-paso-indicator-actions {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+}
+
+.cm-mini-chefbot-toggle {
+    background: linear-gradient(135deg, #2e1a0a, #4a2410) !important;
+    color: rgba(255,255,255,.9) !important;
+    border-color: rgba(255,255,255,.1) !important;
+}
+.cm-mini-chefbot-toggle:hover {
+    background: linear-gradient(135deg, #4a2410, #2e1a0a) !important;
+    color: #fff !important;
+}
+.cm-mini-chefbot-toggle img {
+    filter: brightness(0) invert(1) !important;
+}
+
+/* ── FAB del ChefBot (móvil/tablet, esquina inferior derecha) ── */
+.cm-chefbot-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 600;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2e1a0a, #4a2410);
+    border: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform .18s, box-shadow .18s;
+    /* Solo visible en móvil/tablet */
+    display: none;
+}
+.cm-chefbot-fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 28px rgba(0,0,0,.45);
+}
+.cm-chefbot-fab:focus-visible {
+    outline: 3px solid var(--secondary);
+    outline-offset: 3px;
+}
+.cm-chefbot-fab-close {
+    color: #fff;
+    font-size: 1.2rem;
+}
+.cm-chefbot-fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+}
+
+@media (max-width: 900px) {
+    .cm-chefbot-fab { display: flex; }
+}
+
+/* ── Panel del ChefBot ──────────────────────────────────────── */
+.cm-chefbot-panel {
+    /* Desktop: columna derecha del layout */
+    width: 300px;
+    flex-shrink: 0;
+    background: #fff;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: sticky;
+    top: 60px;
+    max-height: calc(100vh - 60px);
+    z-index: 100;
+}
+
+/* En móvil: drawer desde la derecha */
+@media (max-width: 900px) {
+    .cm-chefbot-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(340px, 92vw);
+        border-left: 1px solid var(--border);
+        box-shadow: -8px 0 32px rgba(0,0,0,.18);
+        z-index: 550;
+        animation: cmSlideFromRight .22s ease;
+    }
+}
+@keyframes cmSlideFromRight {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0);    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-chefbot-panel { animation: none; }
+}
+
+/* El panel está hidden por defecto — JS lo muestra */
+.cm-chefbot-panel[hidden] { display: none; }
+/* Cuando no está hidden, flex */
+.cm-chefbot-panel:not([hidden]) { display: flex; }
+
+/* Desktop: el panel se abre como drawer lateral, no como columna fija */
+@media (min-width: 901px) {
+    .cm-chefbot-panel:not([hidden]) {
+        display: flex;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(340px, 35vw);
+        border-left: 1px solid var(--border);
+        box-shadow: -8px 0 32px rgba(0,0,0,.18);
+        z-index: 550;
+    }
+    .cm-chefbot-fab { display: flex; }
+}
+
+/* ── Header del ChefBot ─────────────────────────────────────── */
+.cm-chefbot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .8rem 1rem;
+    background: linear-gradient(135deg, #2e1a0a 0%, #4a2410 100%);
+    flex-shrink: 0;
+    gap: .5rem;
+}
+
+.cm-chefbot-identity {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+
+.cm-chefbot-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,.2);
+}
+
+.cm-chefbot-name {
+    color: #fff;
+    font-weight: 800;
+    font-size: .9rem;
+    line-height: 1.2;
+}
+
+.cm-chefbot-status {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .7rem;
+    color: rgba(255,255,255,.7);
+}
+
+.cm-chefbot-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px #4ade80;
+    animation: cmDotPulse 2s ease-in-out infinite;
+}
+@keyframes cmDotPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .5; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-chefbot-dot { animation: none; }
+}
+
+.cm-chefbot-header-actions {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+}
+
+.cm-chefbot-action-btn {
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,.8);
+    font-size: .8rem;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.cm-chefbot-action-btn:hover {
+    background: rgba(255,255,255,.2);
+    color: #fff;
+}
+.cm-chefbot-action-btn:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 1px;
+}
+
+/* ── Área de mensajes ───────────────────────────────────────── */
+.cm-chefbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: .85rem .9rem;
+    display: flex;
+    flex-direction: column;
+    gap: .65rem;
+    -webkit-overflow-scrolling: touch;
+    background: var(--cream);
+}
+
+.cm-cb-msg {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+}
+.cm-cb-msg--user { align-items: flex-end; }
+.cm-cb-msg--bot  { align-items: flex-start; }
+
+.cm-cb-bubble {
+    max-width: 88%;
+    padding: .6rem .85rem;
+    border-radius: 14px;
+    font-size: .84rem;
+    line-height: 1.55;
+    word-break: break-word;
+}
+.cm-cb-msg--user .cm-cb-bubble {
+    background: linear-gradient(135deg, var(--primary), #b84700);
+    color: #fff;
+    border-radius: 14px 14px 4px 14px;
+}
+.cm-cb-msg--bot .cm-cb-bubble {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.cm-cb-msg--bot .cm-cb-bubble strong { color: var(--primary); }
+.cm-cb-msg--bot .cm-cb-bubble code {
+    background: var(--surface-3);
+    padding: .1em .35em;
+    border-radius: 4px;
+    font-size: .82em;
+}
+.cm-cb-msg--bot .cm-cb-bubble ul {
+    padding-left: 1.2rem;
+    margin: .35rem 0 0;
+}
+.cm-cb-msg--bot .cm-cb-bubble li { margin-bottom: .2rem; }
+
+.cm-cb-time {
+    font-size: .66rem;
+    color: var(--text-m);
+    padding: 0 .3rem;
+}
+
+/* Indicador de escritura */
+.cm-cb-typing .cm-cb-bubble {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .65rem .85rem;
+}
+.cm-cb-typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-m);
+    animation: cmTypingBounce 1.2s ease-in-out infinite;
+}
+.cm-cb-typing-dot:nth-child(2) { animation-delay: .2s; }
+.cm-cb-typing-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes cmTypingBounce {
+    0%, 80%, 100% { transform: translateY(0);    opacity: .5; }
+    40%            { transform: translateY(-5px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cm-cb-typing-dot { animation: none; }
+}
+
+/* Badge de tipo (oficial / catálogo) */
+.cm-cb-tipo-badge {
+    display: inline-block;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: .1rem .45rem;
+    border-radius: 20px;
+    margin-bottom: .3rem;
+    background: var(--surface-3);
+    color: var(--text-m);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.cm-cb-tipo-oficial  { background: linear-gradient(135deg,#fff3d9,#fff0c8); color: #7a5c0a; }
+.cm-cb-tipo-catalogo { background: linear-gradient(135deg,#e8f5e9,#dcedc8); color: #2e7d32; }
+
+/* ── Sugerencias rápidas ────────────────────────────────────── */
+.cm-chefbot-suggestions {
+    display: flex;
+    gap: .4rem;
+    padding: .5rem .9rem;
+    overflow-x: auto;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.cm-chefbot-suggestions::-webkit-scrollbar { display: none; }
+
+.cm-cb-chip {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    padding: .3rem .7rem;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .15s, border-color .15s;
+}
+.cm-cb-chip:hover {
+    background: var(--surface-3);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.cm-cb-chip:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* ── Área de input ──────────────────────────────────────────── */
+.cm-chefbot-input-area {
+    border-top: 1px solid var(--border);
+    background: #fff;
+    padding: .65rem .9rem;
+    flex-shrink: 0;
+}
+
+.cm-chefbot-input-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: .5rem;
+    background: var(--surface-2);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: .4rem .5rem .4rem .75rem;
+    transition: border-color .18s;
+}
+.cm-chefbot-input-wrap:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(211,84,0,.1);
+}
+
+.cm-chefbot-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-family: 'Nunito', sans-serif;
+    font-size: .88rem;
+    color: var(--text);
+    line-height: 1.5;
+    max-height: 100px;
+    overflow-y: auto;
+    outline: none;
+    padding: 0;
+}
+.cm-chefbot-input::placeholder { color: var(--text-m); }
+
+.cm-chefbot-send {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary);
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .15s, transform .1s;
+}
+.cm-chefbot-send:hover { background: #b84700; }
+.cm-chefbot-send:active { transform: scale(.93); }
+.cm-chefbot-send:disabled { opacity: .45; cursor: not-allowed; }
+.cm-chefbot-send:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+}
+
+/* ── Overlay backdrop en móvil ──────────────────────────────── */
+.cm-chefbot-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 540;
+    display: none;
+}
+.cm-chefbot-backdrop.is-visible { display: block; }
+
+/* ── Ajuste del layout cuando ChefBot está visible (desktop) ── */
+@media (min-width: 901px) {
+    .cm-pasos-layout {
+        /* Sin grid de 3 columnas fijas — el ChefBot es drawer también en desktop */
+        display: flex;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+    }
+    .cm-paso-main { flex: 1; min-width: 0; }
+    .cm-sidebar   { flex-shrink: 0; }
+    /* El panel ChefBot se muestra solo cuando JS lo activa (drawer derecho) */
+    .cm-chefbot-panel { display: none; }
+}
+
+/* Dark mode */
+[data-theme="dark"] .cm-chefbot-messages { background: #0f0b06; }
+[data-theme="dark"] .cm-cb-msg--bot .cm-cb-bubble {
+    background: #1e1208;
+    border-color: rgba(255,255,255,.1);
+    color: rgba(255,255,255,.82);
+}
+[data-theme="dark"] .cm-chefbot-input-area,
+[data-theme="dark"] .cm-chefbot-input-wrap { background: #1e1208; border-color: rgba(255,255,255,.1); }
+[data-theme="dark"] .cm-chefbot-input { color: rgba(255,255,255,.82); }
+[data-theme="dark"] .cm-chefbot-suggestions { background: #161009; border-color: rgba(255,255,255,.08); }
+[data-theme="dark"] .cm-cb-chip { background: #1e1208; border-color: rgba(255,255,255,.1); color: rgba(255,255,255,.75); }

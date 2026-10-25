@@ -123,7 +123,7 @@ class AdminRecetaController
                 'publicada'          => isset($_POST['publicada']) ? 1 : 0,
                 'destacada'          => isset($_POST['destacada']) ? 1 : 0,
                 'ingredientes'       => $this->normalizarIngredientes($_POST),
-                'pasos'              => $this->normalizarPasos($_POST),
+                'pasos'              => $this->normalizarPasos($_POST, $_FILES),
             ]);
 
             $_SESSION['exito'] = '✅ Receta "' . htmlspecialchars($_POST['titulo']) . '" creada correctamente (ID: ' . $id . ').';
@@ -205,7 +205,7 @@ class AdminRecetaController
                 'publicada'          => isset($_POST['publicada']) ? 1 : 0,
                 'destacada'          => isset($_POST['destacada']) ? 1 : 0,
                 'ingredientes'       => $this->normalizarIngredientes($_POST),
-                'pasos'              => $this->normalizarPasos($_POST),
+                'pasos'              => $this->normalizarPasos($_POST, $_FILES),
             ];
             if ($imagen !== null) $datos['imagen'] = $imagen;
 
@@ -339,14 +339,63 @@ class AdminRecetaController
         return $result;
     }
 
-    /** Normaliza los arrays de pasos desde $_POST */
-    private function normalizarPasos(array $post): array
+    /** Normaliza los arrays de pasos desde $_POST y $_FILES */
+    private function normalizarPasos(array $post, array $files = []): array
     {
-        return array_values(
-            array_filter(
-                array_map('trim', $post['paso_desc'] ?? [])
-            )
-        );
+        $descs    = $post['paso_desc']          ?? [];
+        $durs     = $post['paso_duracion']       ?? [];
+        $actuales = $post['paso_imagen_actual']  ?? [];
+
+        // $_FILES['paso_imagen'] viene como array de arrays (multifile)
+        $imgNames  = $files['paso_imagen']['name']     ?? [];
+        $imgTmps   = $files['paso_imagen']['tmp_name'] ?? [];
+        $imgErrors = $files['paso_imagen']['error']    ?? [];
+        $imgSizes  = $files['paso_imagen']['size']     ?? [];
+
+        $result = [];
+        foreach ($descs as $i => $desc) {
+            $desc = trim($desc);
+            if ($desc === '') continue;
+
+            // Imagen: intentar subir nueva; si no hay, conservar actual
+            $imagen = null;
+            $hayArchivo = isset($imgNames[$i]) && $imgNames[$i] !== ''
+                       && ($imgErrors[$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
+
+            if ($hayArchivo) {
+                // Construir array de $_FILES compatible con procesarImagenUpload()
+                $fileSingle = [
+                    'name'     => $imgNames[$i],
+                    'tmp_name' => $imgTmps[$i],
+                    'error'    => $imgErrors[$i],
+                    'size'     => $imgSizes[$i],
+                    'type'     => mime_content_type($imgTmps[$i]) ?: 'image/jpeg',
+                ];
+                $subido = procesarImagenUpload($fileSingle, UPLOAD_PASOS_PATH);
+                if ($subido !== null) {
+                    $imagen = $subido;
+                }
+                // Si procesarImagenUpload devuelve null (tipo inválido/tamaño)
+                // conservamos la imagen actual en lugar de borrarla
+            }
+
+            if ($imagen === null) {
+                // Usar imagen actual si existe y el archivo está en disco
+                $actual = trim($actuales[$i] ?? '');
+                if ($actual !== '' && is_file(UPLOAD_PASOS_PATH . $actual)) {
+                    $imagen = $actual;
+                }
+            }
+
+            $dur = isset($durs[$i]) && (int)$durs[$i] > 0 ? (int)$durs[$i] : null;
+
+            $result[] = [
+                'descripcion' => $desc,
+                'imagen'      => $imagen,
+                'duracion'    => $dur,
+            ];
+        }
+        return $result;
     }
 
     /** Valida y normaliza el valor de dificultad */

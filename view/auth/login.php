@@ -1,15 +1,13 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
-// Si ya hay cookie de sesión guardada, restaurar sesión automáticamente
-if (!isLoggedIn() && isset($_COOKIE['gd_remember'])) {
-    $datos = recordarSesionCookie($_COOKIE['gd_remember']);
-    if ($datos) {
-        $_SESSION['usuario_id']     = $datos['id'];
-        $_SESSION['usuario_nombre'] = $datos['nombre'];
-        $_SESSION['usuario_email']  = $datos['email'];
-        $_SESSION['rol']            = $datos['rol'];
-    }
+if (isset($_COOKIE['gd_remember'])) {
+    setcookie('gd_remember', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
 }
 
 // Si ya está logueado, redirigir según rol
@@ -35,11 +33,11 @@ $baseUrl = rtrim(BASE_URL, '/');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($pageTitle) ?> | GastroDigital</title>
     <meta name="description" content="Inicia sesión en GastroDigital y descubre recetas de todo el mundo.">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=2.3">
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/auth.css?v=3.0">
+    <link href="<?= $baseUrl ?>/assets/vendor/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/nunito/nunito.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=<?= filemtime(__DIR__ . '/../../styles/main.css') ?>">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/auth.css?v=<?= filemtime(__DIR__ . '/../../styles/auth.css') ?>">
 </head>
 <body class="auth-page">
 <?php include __DIR__ . '/../../assets/context_help.php'; ?>
@@ -51,8 +49,12 @@ $baseUrl = rtrim(BASE_URL, '/');
         <div class="gd-auth-deco gd-auth-deco-1"></div>
         <div class="gd-auth-deco gd-auth-deco-2"></div>
         <div class="gd-auth-side-content">
-            <img src="<?= $baseUrl ?>/img/logoGastroDigital.jpeg" alt="GastroDigital" class="gd-auth-side-logo">
-            <h2 class="gd-auth-side-title">GastroDigital</h2>
+            <img src="<?= $baseUrl ?>/img/logo-oficial-gastrodigital-optimized.png"
+                 alt="GastroDigital"
+                 class="gd-auth-side-logo"
+                 loading="eager"
+                 decoding="async"
+                 fetchpriority="high">
             <p class="gd-auth-side-sub">TU COCINA DIGITAL</p>
             <p class="gd-auth-side-desc">
                 Descubre recetas de todo el mundo, guarda tus favoritas y comparte tu pasión por la gastronomía.
@@ -137,14 +139,6 @@ $baseUrl = rtrim(BASE_URL, '/');
                     </div>
                 </div>
 
-                <div class="gd-auth-check">
-                    <input type="checkbox" id="recordarme" name="recordarme" value="1">
-                    <label for="recordarme">
-                        <i class="bi bi-bookmark-check me-1"></i>
-                        Mantener mi sesión iniciada por 30 días
-                    </label>
-                </div>
-
                 <button type="submit" class="gd-auth-submit" id="btnLogin">
                     <i class="bi bi-box-arrow-in-right"></i>
                     Iniciar sesión
@@ -162,7 +156,7 @@ $baseUrl = rtrim(BASE_URL, '/');
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script defer src="<?= $baseUrl ?>/assets/vendor/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script>
 document.getElementById('togglePassword').addEventListener('click', function () {
     const input = document.getElementById('password');

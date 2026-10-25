@@ -22,7 +22,7 @@ class ChatbotModel
     // ── Configuración de Ollama ────────────────────────────────
     private const OLLAMA_URL     = 'http://localhost:11434/api/generate';
     private const MODELO_PRIMARY = 'chefbot:latest';
-    private const MODELO_FALLBACK = 'qwen2.5:7b';
+    private const MODELO_FALLBACK = 'llama3.2:3b';
     private const TIMEOUT_OLLAMA  = 120; // segundos
 
     // ── Sistema de intención ───────────────────────────────────
@@ -91,6 +91,26 @@ class ChatbotModel
         $historial = $this->obtenerHistorial($userId, $sessionKey);
         $lower = mb_strtolower($mensaje, 'UTF-8');
         $recetaMencionada = $this->buscarTituloRecetaEnMensaje($lower);
+
+        $limiteTiempo = $recetaMencionada === null ? $this->extraerLimiteTiempo($lower) : null;
+        if ($limiteTiempo !== null) {
+            $recetas = $this->recetasPorTiempo(
+                $limiteTiempo['minutos'],
+                $limiteTiempo['estricto'],
+                $this->extraerDificultad($lower),
+                $this->extraerCategoria($lower)
+            );
+            $limiteTexto = ($limiteTiempo['estricto'] ? 'menos de ' : 'hasta ')
+                . $limiteTiempo['minutos'] . ' minutos';
+            $respuesta = $recetas === []
+                ? "No encontré recetas publicadas con un tiempo de preparación de $limiteTexto en el catálogo de GastroDigital."
+                : $this->formatearListaRecetas($recetas);
+            $this->guardarSesion($userId, $sessionKey, $mensaje, $respuesta);
+            return [
+                'respuesta' => $respuesta,
+                'tipo' => $recetas === [] ? 'no_encontrada' : 'catalogo',
+            ];
+        }
 
         if ($this->pideCategorias($lower)) {
             $respuesta = $this->formatearCategorias($this->listarCategorias());
@@ -176,8 +196,7 @@ class ChatbotModel
 
         // ── Llamar a Ollama ───────────────────────────────────
         $respuesta = $this->consultarOllama($mensaje, $contexto, $intencion, $historial);
-        $respuesta = "Nota: esta respuesta es conocimiento general generado por el modelo; "
-            . "no consulté fuentes externas ni la verifiqué como receta oficial de GastroDigital.\n\n"
+        $respuesta = "Conocimiento general (no verificado como receta oficial):\n"
             . $respuesta;
 
         $this->guardarSesion($userId, $sessionKey, $mensaje, $respuesta);
@@ -265,6 +284,26 @@ class ChatbotModel
         return null;
     }
 
+    private function extraerLimiteTiempo(string $mensaje): ?array
+    {
+        if (preg_match('/\b(?:menos de|<)\s*(\d{1,3})\s*(?:min(?:utos?)?)?\b/u', $mensaje, $coincidencia)) {
+            $minutos = (int) $coincidencia[1];
+            return $minutos > 0 ? ['minutos' => $minutos, 'estricto' => true] : null;
+        }
+
+        if (preg_match('/\b(?:hasta|m[aá]ximo(?: de)?|en)\s*(\d{1,3})\s*(?:min(?:utos?)?)?\b/u', $mensaje, $coincidencia)) {
+            $minutos = (int) $coincidencia[1];
+            return $minutos > 0 ? ['minutos' => $minutos, 'estricto' => false] : null;
+        }
+
+        if (preg_match('/\brecetas?\b/u', $mensaje)
+            && preg_match('/\br[aá]pid\w*/u', $mensaje)) {
+            return ['minutos' => 30, 'estricto' => false];
+        }
+
+        return null;
+    }
+
     // ── Obtener receta completa con ingredientes y pasos ──────
 
     public function obtenerRecetaCompleta(string $termino): ?array
@@ -272,23 +311,28 @@ class ChatbotModel
         // Detectar columnas reales (tolerante a dos schemas)
         $pkReceta    = $this->pkReal('recetas');
         $fkCat       = $this->colEntre('recetas', ['categoria_id', 'id_categoria']);
+        $fkPais      = $this->colEntre('recetas', ['pais_id', 'id_pais']);
         $fkChef      = $this->colEntre('recetas', ['chef_id', 'id_chef']);
         $pkCat       = $this->pkReal('categorias');
+        $pkPais      = $this->pkReal('paises');
         $pkUsuario   = $this->pkReal('usuarios');
         $pkIng       = $this->pkReal('ingredientes');
         $fkIngReceta = $this->colEntre('ingredientes', ['receta_id', 'id_receta']);
         $pkPaso      = $this->pkReal('pasos');
         $fkPasoRec   = $this->colEntre('pasos', ['receta_id', 'id_receta']);
         $wherePublicada = $this->filtroRecetasPublicadas();
+        $videoCol = $this->colExiste('recetas', 'video_url') ? 'r.video_url' : 'NULL AS video_url';
 
         $stmt = $this->pdo->prepare("
             SELECT r.$pkReceta AS id,
                    r.titulo, r.descripcion, r.tiempo_preparacion, r.porciones,
-                   r.dificultad, r.imagen, r.calorias,
+                   r.dificultad, r.imagen, r.calorias, $videoCol,
                    c.nombre AS categoria,
+                   pais.nombre AS pais,
                    u.nombre AS chef
             FROM recetas r
             LEFT JOIN categorias c ON c.$pkCat   = r.$fkCat
+            LEFT JOIN paises pais ON pais.$pkPais = r.$fkPais
             LEFT JOIN usuarios   u ON u.$pkUsuario = r.$fkChef
             WHERE $wherePublicada AND (r.titulo LIKE ? OR r.titulo LIKE ?)
             ORDER BY CHAR_LENGTH(r.titulo) ASC
@@ -350,6 +394,40 @@ class ChatbotModel
         }
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($limite === null ? [] : [$limite]);
+        return $stmt->fetchAll();
+    }
+
+    private function recetasPorTiempo(
+        int $minutos,
+        bool $estricto,
+        ?string $dificultad = null,
+        ?string $categoria = null
+    ): array {
+        $pkReceta = $this->pkReal('recetas');
+        $fkCategoria = $this->colEntre('recetas', ['categoria_id', 'id_categoria']);
+        $pkCategoria = $this->pkReal('categorias');
+        $wherePublicada = $this->filtroRecetasPublicadas();
+        $comparador = $estricto ? '<' : '<=';
+        $sql = "
+            SELECT r.$pkReceta AS id, r.titulo, r.tiempo_preparacion, r.dificultad,
+                   c.nombre AS categoria
+            FROM recetas r
+            LEFT JOIN categorias c ON c.$pkCategoria = r.$fkCategoria
+            WHERE $wherePublicada AND r.tiempo_preparacion $comparador ?
+        ";
+        $parametros = [$minutos];
+        if ($dificultad !== null) {
+            $sql .= ' AND r.dificultad LIKE ?';
+            $parametros[] = '%' . $dificultad . '%';
+        }
+        if ($categoria !== null) {
+            $sql .= ' AND c.nombre = ?';
+            $parametros[] = $categoria;
+        }
+        $sql .= ' ORDER BY r.tiempo_preparacion ASC, r.titulo ASC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($parametros);
         return $stmt->fetchAll();
     }
 
@@ -520,24 +598,44 @@ class ChatbotModel
     {
         if ($resultado['tipo'] === 'receta_completa') {
             $receta = $resultado['datos'];
-            $respuesta = "**{$receta['titulo']}** — receta del catálogo de GastroDigital.\n";
+            $respuesta = "**{$receta['titulo']}** — receta oficial de GastroDigital.\n";
             if (!empty($receta['descripcion'])) {
-                $respuesta .= "\n{$receta['descripcion']}\n";
+                $respuesta .= "Descripción: {$receta['descripcion']}\n";
             }
             if (!empty($receta['categoria'])) {
-                $respuesta .= "\nCategoría: {$receta['categoria']}";
+                $respuesta .= "Categoría: {$receta['categoria']}";
             }
-            if (!empty($receta['tiempo_preparacion'])) {
-                $respuesta .= "\nTiempo: {$receta['tiempo_preparacion']} minutos";
+            if (!empty($receta['pais'])) {
+                $respuesta .= (!empty($receta['categoria']) ? ' · ' : '') . "Origen: {$receta['pais']}";
             }
-            if (!empty($receta['porciones'])) {
-                $respuesta .= "\nPorciones: {$receta['porciones']}";
-            }
-            if (!empty($receta['dificultad'])) {
-                $respuesta .= "\nDificultad: {$receta['dificultad']}";
+            if (!empty($receta['categoria']) || !empty($receta['pais'])) {
+                $respuesta .= "\n";
             }
 
-            $respuesta .= "\n\nIngredientes:";
+            $detalles = [];
+            if (!empty($receta['tiempo_preparacion'])) {
+                $detalles[] = "Tiempo: {$receta['tiempo_preparacion']} min";
+            }
+            if (!empty($receta['porciones'])) {
+                $detalles[] = "Porciones: {$receta['porciones']}";
+            }
+            if (!empty($receta['dificultad'])) {
+                $detalles[] = "Dificultad: {$receta['dificultad']}";
+            }
+            if (!empty($receta['calorias'])) {
+                $detalles[] = "Calorías: {$receta['calorias']} kcal";
+            }
+            if ($detalles !== []) {
+                $respuesta .= implode(' · ', $detalles) . "\n";
+            }
+            if (!empty($receta['chef'])) {
+                $respuesta .= "Chef: {$receta['chef']}\n";
+            }
+            if (!empty($receta['video_url'])) {
+                $respuesta .= "Video: {$receta['video_url']}\n";
+            }
+
+            $respuesta .= "\n**Ingredientes**";
             if ($receta['ingredientes'] === []) {
                 $respuesta .= "\nNo hay ingredientes registrados para esta receta.";
             } else {
@@ -549,7 +647,7 @@ class ChatbotModel
                 }
             }
 
-            $respuesta .= "\n\nPreparación:";
+            $respuesta .= "\n\n**Preparación**";
             if ($receta['pasos'] === []) {
                 $respuesta .= "\nNo hay pasos registrados para esta receta.";
             } else {
@@ -705,8 +803,8 @@ class ChatbotModel
         }
 
         $respuesta = $ingredientesMencionados !== []
-            ? 'Encontré una receta oficial de GastroDigital que coincide con algunos de tus ingredientes:'
-            : 'Esta es mi recomendación del catálogo oficial de GastroDigital:';
+            ? 'Recomendación oficial que coincide con tus ingredientes:'
+            : 'Recomendación oficial:';
         $respuesta .= "\n\n" . $this->formatearDatosOficiales([
             'tipo' => 'receta_completa',
             'datos' => $recetaCompleta,
@@ -894,7 +992,7 @@ class ChatbotModel
             'options' => [
                 'temperature' => 0.4,   // baja temperatura → respuestas más precisas y fieles
                 'top_p'       => 0.9,
-                'num_predict' => 600,   // límite de tokens en respuesta
+                'num_predict' => 180,   // mantiene breves las respuestas de conocimiento general
             ],
         ];
 
@@ -966,14 +1064,15 @@ Eres Chefbot, el asistente gastronómico oficial de GastroDigital, una plataform
 REGLAS FUNDAMENTALES:
 1. Tu nombre es Chefbot. Siempre que te pregunten quién eres, responde que eres Chefbot, el asistente gastronómico de GastroDigital.
 2. Cuando recibes un bloque de información marcado con "=== INFORMACIÓN OFICIAL DE GASTRODIGITAL ===", esa es la única fuente que debes usar para responder sobre recetas de GastroDigital. No agregues, elimines ni modifiques nada de esa información.
-   Todas las recetas que el sistema encuentre en la base de datos son oficiales; el historial sirve para entender referencias, no para sustituir una consulta actual a la base de datos.
+   Las recetas publicadas que el sistema encuentre en la base de datos forman el catálogo oficial visible al usuario; el historial sirve para entender referencias, no para sustituir una consulta actual a la base de datos.
 3. Nunca presentes una receta que hayas generado tú mismo como si fuera una receta oficial de GastroDigital.
 4. Si el usuario pide una receta oficial y no hay datos en el contexto, debes decir claramente que no encontraste esa receta en el catálogo de GastroDigital.
 5. Para preguntas de gastronomía en general (técnicas, definiciones, sugerencias) puedes usar tu conocimiento sin restricciones, pero siempre aclarando que es conocimiento general y no una receta del catálogo oficial.
-6. Responde siempre en español, de forma amable, clara y concisa.
-7. Usa emojis ocasionalmente para hacer la conversación más amena, pero no en exceso.
-8. Si te hacen preguntas que no son de gastronomía, indica amablemente que solo puedes ayudar con temas culinarios.
-9. En una sugerencia, el sistema selecciona recetas existentes y evita repetir las ya sugeridas en esta conversación. No propongas otra receta como oficial si no aparece en los datos recibidos.
+6. Responde siempre en español y de forma breve: 1 a 3 frases o hasta 5 viñetas si se necesita una lista. No saludes ni repitas la pregunta.
+7. Para recetas oficiales, incluye todos los datos disponibles, cantidades, ingredientes opcionales y cada paso registrado, pero no añadas explicación fuera de esos datos.
+8. Usa emojis solo cuando aporten claridad y nunca en exceso.
+9. Si te hacen preguntas que no son de gastronomía, indica brevemente que solo puedes ayudar con temas culinarios.
+10. En una sugerencia, el sistema selecciona recetas existentes y evita repetir las ya sugeridas en esta conversación. No propongas otra receta como oficial si no aparece en los datos recibidos.
 PROMPT;
     }
 
@@ -1061,8 +1160,9 @@ PROMPT;
     ): void
     {
         $sessionId = $this->obtenerIdSesion($userId, $sessionKey, true);
+        $fkSesion = $this->colEntre('mensajes_chatbot', ['session_id', 'id_session']);
         $stmt = $this->pdo->prepare("
-            INSERT INTO mensajes_chatbot (session_id, mensaje, respuesta, created_at)
+            INSERT INTO mensajes_chatbot ($fkSesion, mensaje, respuesta, created_at)
             VALUES (?, ?, ?, NOW())
         ");
         $stmt->execute([$sessionId, $mensaje, $respuesta]);
@@ -1076,10 +1176,11 @@ PROMPT;
             return [];
         }
 
+        $fkSesion = $this->colEntre('mensajes_chatbot', ['session_id', 'id_session']);
         $stmt = $this->pdo->prepare("
             SELECT mensaje, respuesta, created_at
             FROM mensajes_chatbot
-            WHERE session_id = ?
+            WHERE $fkSesion = ?
             ORDER BY id_menss_chatbot DESC
         ");
         $stmt->execute([$sessionId]);
@@ -1094,7 +1195,8 @@ PROMPT;
             return;
         }
 
-        $stmt = $this->pdo->prepare('DELETE FROM mensajes_chatbot WHERE session_id = ?');
+        $fkSesion = $this->colEntre('mensajes_chatbot', ['session_id', 'id_session']);
+        $stmt = $this->pdo->prepare("DELETE FROM mensajes_chatbot WHERE $fkSesion = ?");
         $stmt->execute([$sessionId]);
     }
 

@@ -77,17 +77,17 @@ $totalConRecetas = count(array_filter($paises, fn($p) => (int)$p['total_recetas'
 <main class="pb-5">
 <div class="container-fluid px-3">
 
-<!-- ── Hero ── -->
-<div class="paises-hero mb-4">
-    <div class="paises-hero-inner">
-        <span class="section-tag"><i class="bi bi-globe-americas me-1"></i>Gastronomía Mundial</span>
-        <h1 class="paises-hero-title">Explora recetas por país</h1>
-        <p class="paises-hero-sub">
-            <?= count($paises) ?> países · <?= $totalConRecetas ?> con recetas publicadas
-        </p>
-    </div>
+    <?php
+    $phTag     = 'Gastronomía Mundial';
+    $phTagImg  = BASE_URL . '/img/Icon/Icon-Animados/paises.gif';
+    $phTitle   = 'Explora recetas por país';
+    $phSub     = count($paises) . ' países · ' . $totalConRecetas . ' con recetas publicadas';
+    $phArtImg  = BASE_URL . '/img/Icon/Icon-Animados/paises.gif';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
     <!-- Búsqueda rápida de país -->
-    <div class="paises-search-wrap">
+    <div class="paises-search-row">
+      <div class="paises-search-wrap">
         <i class="bi bi-search paises-search-icon"></i>
         <input type="text"
                id="inputBuscarPais"
@@ -95,6 +95,7 @@ $totalConRecetas = count(array_filter($paises, fn($p) => (int)$p['total_recetas'
                placeholder="Buscar país…"
                autocomplete="off"
                aria-label="Buscar país">
+      </div>
     </div>
 </div>
 
@@ -294,37 +295,12 @@ $totalConRecetas = count(array_filter($paises, fn($p) => (int)$p['total_recetas'
 </main>
 
 <style>
-/* ── Hero ── */
-.paises-hero {
-    background: linear-gradient(135deg, var(--dark) 0%, #4a2410 60%, var(--dark-2) 100%);
-    border-radius: var(--r-lg);
-    padding: 2.5rem 2rem 2rem;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-.paises-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 80% 50%, rgba(232,168,56,.12) 0%, transparent 60%);
-    pointer-events: none;
-}
-.paises-hero-inner { position: relative; z-index: 1; }
-.paises-hero-title {
-    font-size: clamp(1.5rem, 3vw, 2.2rem);
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: .35rem;
-    letter-spacing: -.02em;
-}
-.paises-hero-sub { color: rgba(255,255,255,.55); font-size: .9rem; margin: 0; }
-
 /* Búsqueda */
+.paises-search-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: -.75rem 0 1.25rem;
+}
 .paises-search-wrap {
     position: relative;
     z-index: 1;
@@ -335,27 +311,26 @@ $totalConRecetas = count(array_filter($paises, fn($p) => (int)$p['total_recetas'
     left: .9rem;
     top: 50%;
     transform: translateY(-50%);
-    color: rgba(255,255,255,.45);
+    color: var(--text-m);
     font-size: .9rem;
     pointer-events: none;
 }
 .paises-search-input {
-    background: rgba(255,255,255,.1);
-    border: 1.5px solid rgba(255,255,255,.18);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
     border-radius: 30px;
     padding: .6rem 1.1rem .6rem 2.4rem;
-    color: #fff;
+    color: var(--text);
     font-size: .88rem;
     min-width: 220px;
-    backdrop-filter: blur(8px);
     transition: all .2s;
     font-family: 'Nunito', sans-serif;
 }
-.paises-search-input::placeholder { color: rgba(255,255,255,.4); }
+.paises-search-input::placeholder { color: var(--text-m); }
 .paises-search-input:focus {
     outline: none;
     border-color: var(--gold);
-    background: rgba(255,255,255,.16);
+    background: var(--surface);
     box-shadow: 0 0 0 3px rgba(232,168,56,.2);
 }
 
@@ -767,5 +742,4 @@ $totalConRecetas = count(array_filter($paises, fn($p) => (int)$p['total_recetas'
 })();
 </script>
 
-<?php include __DIR__ . '/../../assets/chatbot.php'; ?>
 <?php include __DIR__ . '/../../assets/fooder.php'; ?>

@@ -31,7 +31,14 @@ class Notificacion
         $stmt->bindValue(1, $usuarioId, PDO::PARAM_INT);
         $stmt->bindValue(2, max(1, min($limite, 100)), PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll();
+        $notificaciones = $stmt->fetchAll();
+        foreach ($notificaciones as &$notificacion) {
+            if (($notificacion['tipo'] ?? '') === 'reporte') {
+                $notificacion['url'] = 'index.php?route=admin/moderacion&tab=reportes';
+            }
+        }
+        unset($notificacion);
+        return $notificaciones;
     }
 
     public function crear(int $usuarioId, string $tipo, string $mensaje, string $url): void

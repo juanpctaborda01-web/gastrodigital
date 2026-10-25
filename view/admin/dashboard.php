@@ -3,13 +3,12 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/categorias.php';
 require_once __DIR__ . '/../../models/receta.php';
 require_once __DIR__ . '/../../models/usuarios.php';
-require_once __DIR__ . '/../../models/categoria.php';
 requireRole(ROL_ADMIN);
 
 $pageTitle    = 'Dashboard Admin';
+$extraCss     = 'admin-dashboard.css?v=' . filemtime(__DIR__ . '/../../styles/admin-dashboard.css');
 $recetaModel  = new Receta();
 $userModel    = new Usuario();
-$catModel     = new Categoria();
 $nombre       = $_SESSION['usuario_nombre'] ?? 'Admin';
 $userId       = (int)($_SESSION['usuario_id'] ?? 0);
 $perfil       = $userModel->buscarPorId($userId) ?: [];
@@ -24,13 +23,38 @@ unset($_SESSION['exito'], $_SESSION['error']);
 
 // --- Datos del dashboard ---
 $stats          = $recetaModel->statsAdmin();
-$statsPorRol    = $userModel->statsPorRol();
-$totalUsuarios  = array_sum($statsPorRol);
-$nuevos30       = $userModel->totalNuevosEnDias(30);
+$dashboardUsers = $userModel->dashboardStats();
+$statsPorRol    = [
+    'admin' => (int)($dashboardUsers['admin'] ?? 0),
+    'chef'  => (int)($dashboardUsers['chef'] ?? 0),
+    'usuario' => (int)($dashboardUsers['usuario'] ?? 0),
+];
+$totalUsuarios  = (int)($dashboardUsers['total_usuarios'] ?? array_sum($statsPorRol));
+$totalCategorias = (int)($stats['categorias'] ?? 0);
+$nuevos30       = (int)($dashboardUsers['nuevos_30'] ?? 0);
 $masVistas      = $recetaModel->masVistas(8);
-$topCategorias  = $recetaModel->topCategorias(6);
+$topCategorias  = $recetaModel->topCategorias(8);
 $usuariosRecientes = $userModel->usuariosRecientes(30, 6);
 $recientes      = $recetaModel->listarFiltradas([], 1, 5)['recetas'];
+$chartRoles = [
+    'labels' => ['Administradores', 'Chefs', 'Usuarios'],
+    'values' => [
+        (int)($statsPorRol['admin'] ?? 0),
+        (int)($statsPorRol['chef'] ?? 0),
+        (int)($statsPorRol['usuario'] ?? 0),
+    ],
+];
+$chartRecetas = [
+    'labels' => ['Publicadas', 'Borradores'],
+    'values' => [
+        (int)$stats['publicadas'],
+        max(0, (int)$stats['total'] - (int)$stats['publicadas']),
+    ],
+];
+$chartCategorias = [
+    'labels' => array_map(static fn(array $categoria): string => $categoria['nombre'], $topCategorias),
+    'values' => array_map(static fn(array $categoria): int => (int)$categoria['total_recetas'], $topCategorias),
+];
 
 $hora   = (int)date('H');
 $saludo = $hora < 12 ? 'Buenos días' : ($hora < 18 ? 'Buenas tardes' : 'Buenas noches');
@@ -59,7 +83,7 @@ include __DIR__ . '/../../assets/topbar.php';
           </div>
           <h1 class="gd-dash-hero-title">
             <?= $saludo ?>, <?= htmlspecialchars($nombre) ?>
-            <img src="<?= BASE_URL ?>/img/icon/Icon-Animados/saludo.gif" alt="👋" style="width:40px;height:40px;vertical-align:middle">
+            <span aria-hidden="true">👋</span>
           </h1>
           <p class="gd-dash-hero-desc">Gestiona recetas, categorías, chefs y la actividad de la comunidad gastronómica en tiempo real.</p>
           <div class="gd-dash-hero-stats">
@@ -69,6 +93,8 @@ include __DIR__ . '/../../assets/topbar.php';
             </span>
             <span class="gd-dash-hero-sep">•</span>
             <span class="gd-dash-hero-stat"><i class="bi bi-people"></i><?= $totalUsuarios ?> usuarios</span>
+            <span class="gd-dash-hero-sep">•</span>
+            <span class="gd-dash-hero-stat"><i class="bi bi-tags"></i><?= $totalCategorias ?> categorías</span>
             <span class="gd-dash-hero-sep">•</span>
             <span class="gd-dash-hero-stat"><i class="bi bi-eye"></i><?= number_format($stats['total_visitas']) ?> visitas</span>
           </div>
@@ -84,11 +110,13 @@ include __DIR__ . '/../../assets/topbar.php';
                style="width:110px;height:110px;opacity:.2;filter:brightness(5) drop-shadow(0 4px 14px rgba(232,168,56,.3))">
         </div>
       </div>
+    </div>
+
     <!-- Estadísticas principales — métricas generales -->
     <div class="gd-stat-wrap">
     <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
-            <div class="stat-card" style="background:linear-gradient(135deg,var(--orange),var(--red))">
+        <div class="col-6 col-xl">
+            <div class="stat-card-colored" style="background:linear-gradient(135deg,#8f2b0c,#a83d1e)">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="stat-number"><?= $stats['total'] ?></div>
@@ -98,44 +126,153 @@ include __DIR__ . '/../../assets/topbar.php';
                 </div>
             </div>
         </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="stat-card" style="background:linear-gradient(135deg,var(--secondary),var(--secondary-dark))">
+        <div class="col-6 col-xl">
+            <div class="stat-card-colored" style="background:linear-gradient(135deg,#7a4700,#9a5a00)">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="stat-number"><?= $totalUsuarios ?></div>
                         <div class="stat-label">Usuarios registrados</div>
                     </div>
-                    <i class="bi bi-people stat-icon"></i>
+                    <img src="<?= BASE_URL ?>/img/Icon/ICON-Sobrantes/registro.png"
+                         alt="" class="stat-icon-image" width="42" height="42">
                 </div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
-            <div class="stat-card"
-                 style="background:linear-gradient(135deg,var(--accent),var(--secondary-dark))">
+        <div class="col-6 col-xl">
+            <div class="stat-card-colored" style="background:linear-gradient(135deg,#205840,#286b53)">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-number"><?= $totalCategorias ?></div>
+                        <div class="stat-label">Categorías</div>
+                    </div>
+                    <img src="<?= BASE_URL ?>/img/Icon/ICON-Sobrantes/gourmet.png"
+                         alt="" class="stat-icon-image" width="42" height="42">
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="stat-card-colored"
+                 style="background:linear-gradient(135deg,#642b19,#8e3d22)">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="stat-number"><?= number_format($stats['total_visitas']) ?></div>
                         <div class="stat-label">Visitas totales</div>
                     </div>
-                    <i class="bi bi-eye stat-icon"></i>
+                    <img src="<?= BASE_URL ?>/img/Icon/ICON-Sobrantes/visitas.png"
+                         alt="" class="stat-icon-image" width="42" height="42">
                 </div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
-            <div class="stat-card" style="background:linear-gradient(135deg,#7e665a,#a38776)">
+        <div class="col-6 col-xl">
+            <div class="stat-card-colored" style="background:linear-gradient(135deg,#523d32,#674c3e)">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="stat-number"><?= $stats['total_comentarios'] ?></div>
                         <div class="stat-label">Comentarios</div>
                     </div>
-                    <i class="bi bi-chat-dots stat-icon"></i>
+                    <img src="<?= BASE_URL ?>/img/Icon/ICON-Sobrantes/comentario.png"
+                         alt="" class="stat-icon-image" width="42" height="42">
                 </div>
             </div>
         </div>
     </div>
     </div><!-- /gd-stat-wrap -->
+
+    <section class="mb-4" aria-labelledby="admin-chart-title">
+        <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3 px-1">
+            <div>
+                <span class="text-uppercase small fw-bold text-muted">Análisis de la comunidad</span>
+                <h2 id="admin-chart-title" class="h4 fw-bold mb-0">Estadísticas visuales</h2>
+            </div>
+            <span class="text-muted small">Datos actuales de la plataforma</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-4">
+                <article class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="h6 fw-bold mb-1">Usuarios por rol</h3>
+                        <p class="small text-muted mb-3">Distribución de las <?= number_format($totalUsuarios) ?> cuentas registradas</p>
+                        <div class="admin-chart-rows" role="img" aria-label="Usuarios por rol">
+                            <?php
+                            $roleColors = ['#a94024', '#e6a23c', '#568a6b'];
+                            $roleTotal = max(1, array_sum($chartRoles['values']));
+                            foreach ($chartRoles['labels'] as $index => $label):
+                                $value = $chartRoles['values'][$index];
+                                $percentage = round(($value / $roleTotal) * 100, 2);
+                            ?>
+                                <div class="admin-chart-row">
+                                    <div class="admin-chart-row-heading">
+                                        <span><?= htmlspecialchars($label) ?></span>
+                                        <strong><?= number_format($value) ?></strong>
+                                    </div>
+                                    <div class="admin-chart-track">
+                                        <span style="width:<?= $percentage ?>%;background-color:<?= $roleColors[$index] ?>"></span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <article class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="h6 fw-bold mb-1">Estado de las recetas</h3>
+                        <p class="small text-muted mb-3">Publicadas frente a borradores</p>
+                        <div class="admin-chart-rows" role="img" aria-label="Estado de las recetas">
+                            <?php
+                            $recipeColors = ['#568a6b', '#d9dce2'];
+                            $recipeTotal = max(1, array_sum($chartRecetas['values']));
+                            foreach ($chartRecetas['labels'] as $index => $label):
+                                $value = $chartRecetas['values'][$index];
+                                $percentage = round(($value / $recipeTotal) * 100, 2);
+                            ?>
+                                <div class="admin-chart-row">
+                                    <div class="admin-chart-row-heading">
+                                        <span><?= htmlspecialchars($label) ?></span>
+                                        <strong><?= number_format($value) ?></strong>
+                                    </div>
+                                    <div class="admin-chart-track">
+                                        <span style="width:<?= $percentage ?>%;background-color:<?= $recipeColors[$index] ?>"></span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <div class="col-xl-4">
+                <article class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="h6 fw-bold mb-1">Recetas por categoría</h3>
+                        <p class="small text-muted mb-3">Categorías con más recetas</p>
+                        <?php if ($chartCategorias['labels']): ?>
+                            <div class="admin-category-chart" role="img" aria-label="Recetas por categoría">
+                                <?php
+                                $maxCategoria = max(1, max($chartCategorias['values']));
+                                foreach ($chartCategorias['labels'] as $index => $label):
+                                    $value = $chartCategorias['values'][$index];
+                                    $percentage = round(($value / $maxCategoria) * 100, 2);
+                                ?>
+                                    <div class="admin-chart-row">
+                                        <div class="admin-chart-row-heading">
+                                            <span class="text-truncate"><?= htmlspecialchars($label) ?></span>
+                                            <strong><?= number_format($value) ?></strong>
+                                        </div>
+                                        <div class="admin-chart-track">
+                                            <span style="width:<?= $percentage ?>%;background-color:var(--primary)"></span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="small text-muted mb-0">Todavía no hay categorías para graficar.</p>
+                        <?php endif; ?>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
 
     <!-- Estadísticas secundarias -->
     <div class="gd-stat-wrap">
@@ -316,14 +453,29 @@ include __DIR__ . '/../../assets/topbar.php';
                         </a>
                     </div>
                     <div class="row g-2">
-                        <?php foreach ($topCategorias as $cat): ?>
+                        <?php foreach ($topCategorias as $cat):
+                            $iconoCategoria = basename((string)$cat['icono']);
+                            $iconoExtension = strtolower(pathinfo($iconoCategoria, PATHINFO_EXTENSION));
+                            $iconoEsArchivo = in_array($iconoExtension, ['png', 'jpg', 'jpeg', 'svg'], true);
+                            $iconoBootstrap = preg_match('/(?:^|\s)bi-([a-z0-9-]+)$/i', (string)$cat['icono'], $coincidenciaIcono)
+                                ? 'bi-' . $coincidenciaIcono[1]
+                                : 'bi-tag-fill';
+                        ?>
                         <div class="col-sm-6 col-xl-4">
                             <div class="d-flex align-items-center gap-2 p-2 rounded-3"
                                  style="background:<?= htmlspecialchars($cat['bg']) ?>20;border:1px solid <?= htmlspecialchars($cat['color']) ?>30">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                                      style="width:38px;height:38px;background:<?= htmlspecialchars($cat['bg']) ?>">
-                                    <i class="bi <?= htmlspecialchars($cat['icono']) ?>"
-                                       style="color:<?= htmlspecialchars($cat['color']) ?>;font-size:1.1rem"></i>
+                                    <?php if ($iconoEsArchivo): ?>
+                                        <img src="<?= BASE_URL ?>/img/Icon/Categorias/<?= rawurlencode($iconoCategoria) ?>"
+                                             alt="" width="26" height="26" loading="lazy"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'">
+                                        <i class="bi <?= htmlspecialchars($iconoBootstrap) ?>"
+                                           style="display:none;color:<?= htmlspecialchars($cat['color']) ?>;font-size:1.1rem"></i>
+                                    <?php else: ?>
+                                        <i class="bi <?= htmlspecialchars($iconoBootstrap) ?>"
+                                           style="color:<?= htmlspecialchars($cat['color']) ?>;font-size:1.1rem"></i>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="overflow-hidden flex-grow-1">
                                     <div class="fw-700 small text-truncate"><?= htmlspecialchars($cat['nombre']) ?></div>
@@ -533,6 +685,15 @@ include __DIR__ . '/../../assets/topbar.php';
                             <div>
                                 <div class="fw-700">Ver catálogo</div>
                                 <small class="text-muted fw-400">Todas las recetas públicas</small>
+                            </div>
+                        </a>
+                        <a href="<?= BASE_URL ?>/descargar-imagenes-recetas.php"
+                           class="btn btn-sm text-start d-flex align-items-center gap-2"
+                           style="background:linear-gradient(135deg,#fff8f0,#fdf0e0);border:1px solid #f5c8a0">
+                            <i class="bi bi-images fs-5" style="color:var(--primary)"></i>
+                            <div>
+                                <div class="fw-700">Herramienta de imágenes</div>
+                                <small class="text-muted fw-400">Descargar desde Wikimedia Commons</small>
                             </div>
                         </a>
                     </div>

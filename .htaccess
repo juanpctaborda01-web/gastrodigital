@@ -13,6 +13,24 @@ RewriteRule ^(.*)$ index.php [QSA,L]
     Header set X-XSS-Protection "1; mode=block"
 </IfModule>
 
+# Comprimir respuestas de texto para reducir el tiempo de descarga.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpe?g|gif|webp|svg|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+    <FilesMatch "\.(woff2?|ttf|otf)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+</IfModule>
+
 # Caché para assets estáticos
 <IfModule mod_expires.c>
     ExpiresActive On
@@ -21,4 +39,9 @@ RewriteRule ^(.*)$ index.php [QSA,L]
     ExpiresByType image/png            "access plus 1 month"
     ExpiresByType image/jpeg           "access plus 1 month"
     ExpiresByType image/webp           "access plus 1 month"
+    ExpiresByType image/svg+xml        "access plus 1 month"
+    ExpiresByType font/woff            "access plus 1 year"
+    ExpiresByType font/woff2           "access plus 1 year"
+    ExpiresByType font/ttf             "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
 </IfModule>

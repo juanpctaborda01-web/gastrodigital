@@ -13,6 +13,11 @@ class PageController
 
     public function register(): void
     {
+        $registroForm = $_SESSION['registro_form'] ?? [];
+        unset($_SESSION['registro_form']);
+        if (!empty($registroForm)) {
+            $_POST = array_merge($_POST, $registroForm);
+        }
         require_once __DIR__ . '/../view/auth/register.php';
     }
 
@@ -29,6 +34,11 @@ class PageController
         require_once __DIR__ . '/../view/usuario/ver_recetas.php';
     }
 
+    public function cocinarReceta(): void
+    {
+        require_once __DIR__ . '/../view/usuario/cook_mode.php';
+    }
+
     public function favoritos(): void
     {
         requireLogin();
@@ -38,7 +48,11 @@ class PageController
     public function favorito(): void
     {
         header('Content-Type: application/json; charset=utf-8');
-        requireLogin();
+        if (!isLoggedIn()) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Inicia sesión para guardar recetas favoritas.']);
+            return;
+        }
 
         $tokenPost = $_POST['csrf_token'] ?? '';
         $tokenSesion = $_SESSION['csrf_token'] ?? '';

@@ -14,7 +14,9 @@ require_once __DIR__ . '/config/categorias.php';
 $destacadas    = $recetaModel->masPopulares(3);
 $categorias    = $categoriaModel->listarSimple();
 $stats         = $recetaModel->stats();
-$pdo           = Conexion::getInstancia()->getPDO();
+$favoritosIds  = isLoggedIn()
+    ? $recetaModel->favoritosIds((int)$_SESSION['usuario_id'], array_column($destacadas, 'id'))
+    : [];
 
 $pageTitle = 'Inicio';
 ?>
@@ -77,12 +79,20 @@ $pageTitle = 'Inicio';
                             $icoHero    = getCategoriaIcono($catHero);
                             $icoUrlHero = BASE_URL . '/img/Icon/Categorias/' . $icoHero;
                         ?>
-                        <div class="hero-float-card <?= $clases[$idx] ?>">
-                            <img src="<?= $icoUrlHero ?>"
-                                 alt="<?= htmlspecialchars($catHero) ?>"
-                                 class="hero-card-icon-img"
-                                 onerror="this.style.display='none'">
-                            <span><?= htmlspecialchars($r['titulo']) ?></span>
+                        <a class="hero-float-card <?= $clases[$idx] ?>"
+                           href="<?= BASE_URL ?>/index.php?route=recetas&id=<?= (int) $r['id'] ?>"
+                           aria-label="Ver receta <?= htmlspecialchars($r['titulo']) ?>">
+                            <div class="hero-card-top">
+                                <span class="hero-card-icon-wrap">
+                                    <img src="<?= $icoUrlHero ?>"
+                                         alt=""
+                                         class="hero-card-icon-img"
+                                         onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+                                    <i class="bi bi-egg-fried hero-card-fallback" aria-hidden="true" hidden></i>
+                                </span>
+                                <i class="bi bi-arrow-up-right hero-card-link-icon" aria-hidden="true"></i>
+                            </div>
+                            <span class="hero-card-title"><?= htmlspecialchars($r['titulo']) ?></span>
                             <small>
                                 <i class="bi bi-clock" style="font-size:.65rem;margin-right:3px"></i>
                                 <?= $r['tiempo_preparacion'] ?> min
@@ -90,7 +100,7 @@ $pageTitle = 'Inicio';
                                 · <?= htmlspecialchars($catHero) ?>
                                 <?php endif; ?>
                             </small>
-                        </div>
+                        </a>
                         <?php endforeach; ?>
                         <div class="hero-circle-bg"></div>
                     </div>
@@ -127,6 +137,8 @@ $pageTitle = 'Inicio';
                     <img src="<?= BASE_URL ?>/img/Icon/Categorias/<?= htmlspecialchars($catIcoFile) ?>"
                          alt="<?= htmlspecialchars($cat['nombre']) ?>"
                          style="width:20px;height:20px;object-fit:contain"
+                         loading="lazy"
+                         decoding="async"
                          onerror="this.style.display='none'">
                     <span><?= htmlspecialchars($cat['nombre']) ?></span>
                 </a>
@@ -160,15 +172,11 @@ $pageTitle = 'Inicio';
                     $catNombre = $r['categoria'] ?? $r['cat_nombre'] ?? 'Otros';
                     $color     = getCategoriaColor($catNombre);
                     $catIcono  = getCategoriaIcono($catNombre);
-                    // ISO de país para flag
-                    $isoFlag = '';
-                    try {
-                        if (!empty($r['id_pais'])) {
-                            $stmtP = $pdo->prepare("SELECT codigo_iso FROM paises WHERE id_pais = ? LIMIT 1");
-                            $stmtP->execute([$r['id_pais']]);
-                            $isoFlag = strtolower($stmtP->fetchColumn() ?: '');
-                        }
-                    } catch (Throwable $e) {}
+                    $isoFlag = strtolower((string) ($r['pais_iso'] ?? ''));
+                    $esFav = in_array((int)$r['id'], $favoritosIds, true);
+                    if (!preg_match('/^[a-z]{2,3}$/', $isoFlag)) {
+                        $isoFlag = '';
+                    }
                     $medals = ['🥇','🥈','🥉'];
                 ?>
                 <div class="col-sm-10 col-md-6 col-lg-4">
@@ -178,7 +186,9 @@ $pageTitle = 'Inicio';
                         <?php if (!empty($r['imagen']) && file_exists(ROOT_PATH . '/uploads/' . $r['imagen'])): ?>
                             <img src="<?= BASE_URL ?>/uploads/<?= htmlspecialchars($r['imagen']) ?>"
                                  class="card-img-top"
-                                 alt="<?= htmlspecialchars($r['titulo']) ?>">
+                                 alt="<?= htmlspecialchars($r['titulo']) ?>"
+                                 loading="lazy"
+                                 decoding="async">
                         <?php else: ?>
                             <div class="receta-img-placeholder"
                                  style="background:linear-gradient(135deg,<?= $color ?>18,<?= $color ?>38)">
@@ -251,11 +261,28 @@ $pageTitle = 'Inicio';
                             <?php endif; ?>
                         </div>
 
-                        <div class="card-footer bg-transparent border-0 pb-3">
+                        <div class="card-footer bg-transparent border-0 pb-3 d-flex gap-2">
                             <a href="<?= BASE_URL ?>/index.php?route=recetas&id=<?= (int)$r['id'] ?>"
-                               class="btn btn-primary btn-sm w-100">
+                               class="btn btn-primary btn-sm flex-grow-1">
                                 Ver receta <i class="bi bi-arrow-right ms-1"></i>
                             </a>
+                            <?php if (isLoggedIn()): ?>
+                            <button type="button"
+                                    class="btn btn-sm <?= $esFav ? 'btn-danger' : 'btn-outline-danger' ?> btn-fav"
+                                    data-id="<?= (int)$r['id'] ?>"
+                                    title="<?= $esFav ? 'Quitar de favoritos' : 'Guardar en favoritos' ?>"
+                                    aria-label="<?= $esFav ? 'Quitar de favoritos' : 'Guardar en favoritos' ?>"
+                                    aria-pressed="<?= $esFav ? 'true' : 'false' ?>">
+                                <i class="bi bi-heart<?= $esFav ? '-fill' : '' ?>" aria-hidden="true"></i>
+                            </button>
+                            <?php else: ?>
+                            <a href="<?= BASE_URL ?>/index.php?route=login"
+                               class="btn btn-sm btn-outline-danger"
+                               title="Inicia sesión para guardar en favoritos"
+                               aria-label="Inicia sesión para guardar en favoritos">
+                                <i class="bi bi-heart" aria-hidden="true"></i>
+                            </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -275,13 +302,13 @@ $pageTitle = 'Inicio';
             <div class="row g-4 justify-content-center">
                 <?php
                 $pasos = [
-                    ['num'=>'01','ico'=>'registro.png',       'titulo'=>'Crea tu cuenta',    'desc'=>'Regístrate gratis en segundos y únete a la comunidad.'],
-                    ['num'=>'02','ico'=>'plato-principal.png', 'titulo'=>'Explora recetas',   'desc'=>'Busca por nombre, ingrediente, tiempo o categoría.'],
-                    ['num'=>'03','ico'=>'parrillada.png',      'titulo'=>'Publica las tuyas', 'desc'=>'Si eres chef, comparte tus creaciones con el mundo.'],
-                    ['num'=>'04','ico'=>'heart.gif',           'titulo'=>'Guarda favoritos',  'desc'=>'Marca las recetas que más te gusten para cocinarlas después.','anim'=>true],
+                    ['num'=>'01','ico'=>'registro.png',       'dir'=>'ICON-Sobrantes', 'titulo'=>'Crea tu cuenta',    'desc'=>'Regístrate gratis en segundos y únete a la comunidad.'],
+                    ['num'=>'02','ico'=>'plato-principal.png', 'dir'=>'Categorias',     'titulo'=>'Explora recetas',   'desc'=>'Busca por nombre, ingrediente, tiempo o categoría.'],
+                    ['num'=>'03','ico'=>'parrillada.png',      'dir'=>'Categorias',     'titulo'=>'Publica las tuyas', 'desc'=>'Si eres chef, comparte tus creaciones con el mundo.'],
+                    ['num'=>'04','ico'=>'cheque.png',          'dir'=>'ICON-Sobrantes', 'titulo'=>'Guarda favoritos',  'desc'=>'Marca las recetas que más te gusten para cocinarlas después.'],
                 ];
                 foreach ($pasos as $p):
-                    $icoDir = !empty($p['anim']) ? BASE_URL . '/img/Icon/Icon-Animados/' : BASE_URL . '/img/Icon/ICON-Sobrantes/';
+                    $icoDir = BASE_URL . '/img/Icon/' . $p['dir'] . '/';
                 ?>
                 <div class="col-sm-6 col-lg-3">
                     <div class="como-card text-center">

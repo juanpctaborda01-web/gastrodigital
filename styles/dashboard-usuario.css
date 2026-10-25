@@ -981,11 +981,6 @@ body.gd-sidebar-open .gd-sidebar {
     box-shadow: 0 6px 24px rgba(0,0,0,.3);
 }
 
-.gd-fab-info {
-    background: linear-gradient(135deg, #2c1810, #3b1a0a);
-    color: #e8a838;
-}
-
 .gd-fab-chat {
     background: linear-gradient(135deg, #e56a26, #f27a24);
     color: #fff;

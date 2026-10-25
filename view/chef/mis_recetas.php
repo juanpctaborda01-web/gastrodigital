@@ -84,7 +84,7 @@ include __DIR__ . '/../../assets/topbar.php';
           </div>
           <h1 class="gd-dash-hero-title">
             <?= $saludo ?>, Chef <?= htmlspecialchars($nombre) ?>
-            <img src="<?= BASE_URL ?>/img/icon/Icon-Animados/saludo.gif" alt="👋" style="width:36px;height:36px;vertical-align:middle">
+            <span aria-hidden="true">👋</span>
           </h1>
           <p class="gd-dash-hero-desc">Administra tus recetas, supervisa las valoraciones de tus comensales y crea nuevas experiencias gastronómicas.</p>
           <div class="gd-dash-hero-stats">
@@ -298,6 +298,12 @@ include __DIR__ . '/../../assets/topbar.php';
                                                 <span class="chef-dif-badge chef-dif-<?= strtolower($r['dificultad'] ?? 'facil') ?>">
                                                     <?= $difIcon[$r['dificultad']] ?? '' ?> <?= htmlspecialchars($r['dificultad'] ?? '') ?>
                                                 </span>
+                                                <?php if (!empty($r['pais_nombre'])): ?>
+                                                <span class="chef-receta-pais">
+                                                    <i class="bi bi-globe-americas"></i>
+                                                    <?= htmlspecialchars($r['pais_nombre']) ?>
+                                                </span>
+                                                <?php endif; ?>
                                                 <span class="text-muted" style="font-size:.72rem">
                                                     <i class="bi bi-clock me-1"></i><?= (int)$r['tiempo_preparacion'] ?> min
                                                 </span>
@@ -688,11 +694,11 @@ include __DIR__ . '/../../assets/topbar.php';
     background: rgba(255,255,255,.1);
     pointer-events: none;
 }
-.chef-stat-orange  { background: linear-gradient(135deg, #d35400, #e8782a); }
-.chef-stat-red     { background: linear-gradient(135deg, #c0392b, #e74c3c); }
-.chef-stat-crimson { background: linear-gradient(135deg, #96281b, #c0392b); }
-.chef-stat-brown   { background: linear-gradient(135deg, #7e665a, #a38776); }
-.chef-stat-gold    { background: linear-gradient(135deg, #c98d20, #e8a838); }
+.chef-stat-orange  { background: linear-gradient(135deg, #8f2b0c, #a83d1e); }
+.chef-stat-red     { background: linear-gradient(135deg, #7e1d16, #9c2b22); }
+.chef-stat-crimson { background: linear-gradient(135deg, #641b13, #82251a); }
+.chef-stat-brown   { background: linear-gradient(135deg, #523d32, #674c3e); }
+.chef-stat-gold    { background: linear-gradient(135deg, #684400, #805600); }
 
 .chef-stat-icon {
     font-size: 2rem;
@@ -706,15 +712,23 @@ include __DIR__ . '/../../assets/topbar.php';
     line-height: 1;
     white-space: nowrap;
 }
+.chef-receta-pais {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    color: #65716c;
+    font-size: .7rem;
+    white-space: nowrap;
+}
 .chef-stat-label {
     font-size: .78rem;
     font-weight: 700;
-    opacity: .88;
+    opacity: 1;
     margin-top: .15rem;
 }
 .chef-stat-sub {
     font-size: .68rem;
-    opacity: .65;
+    opacity: 1;
     margin-top: .1rem;
     white-space: nowrap;
     overflow: hidden;
@@ -793,6 +807,20 @@ include __DIR__ . '/../../assets/topbar.php';
     vertical-align: middle;
 }
 .chef-recetas-tabla tbody tr:last-child td { border-bottom: none; }
+
+@media (max-width: 767.98px) {
+    .chef-recetas-tabla { min-width: 720px; }
+    .chef-filter-tabs {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    .chef-filter-tab {
+        justify-content: center;
+        flex: 1 0 auto;
+        padding-inline: .65rem;
+    }
+}
 
 /* Thumbnail */
 .chef-receta-thumb {

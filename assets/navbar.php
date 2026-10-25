@@ -27,7 +27,6 @@ function sbActive(string $route, string $uri): string {
 }
 
 $icoBase = $baseUrl . '/img/Icon/Categorias/';
-$icoAnim = $baseUrl . '/img/Icon/Icon-Animados/';
 $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
 ?>
 
@@ -39,7 +38,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
   <div class="sb-head">
     <a class="sb-brand" href="<?= $baseUrl ?>/">
       <div class="sb-logo-wrap">
-        <img src="<?= $baseUrl ?>/img/GastroDigitalLogo2.png" alt="GD" class="sb-logo-img"
+        <img src="<?= $baseUrl ?>/img/logo-oficial-gastrodigital-optimized.png" alt="GastroDigital" class="sb-logo-img"
              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <span class="sb-logo-fallback" style="display:none"><i class="bi bi-egg-fried"></i></span>
       </div>
@@ -48,11 +47,6 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
         <span class="sb-brand-sub">✦ TU COCINA DIGITAL</span>
       </div>
     </a>
-    <button class="sb-hamburger" id="sbToggle" aria-label="Toggle menú">
-      <span class="sb-ham-line"></span>
-      <span class="sb-ham-line"></span>
-      <span class="sb-ham-line"></span>
-    </button>
   </div>
 
   <!-- ══ SEARCH — solo cuando está expandido ════════════════════════════ -->
@@ -76,7 +70,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       </div>
       <a class="sb-item <?= sbActive('', $uri) ?>" href="<?= $baseUrl ?>/" data-tooltip="Inicio">
         <span class="sb-icon sb-icon--orange">
-          <img src="<?= $icoAnim ?>home.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-house-door-fill" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Inicio</span>
       </a>
@@ -125,7 +119,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       <a class="sb-item <?= sbActive('admin', $uri) && !str_contains($uri, '/') ? 'is-active' : '' ?>"
          href="<?= $baseUrl ?>/admin" data-tooltip="Dashboard">
         <span class="sb-icon sb-icon--orange">
-          <img src="<?= $icoAnim ?>home.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-speedometer2" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Dashboard</span>
         <?php if (sbActive('admin', $uri) && !str_contains($uri, '/')): ?>
@@ -141,7 +135,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       </a>
       <a class="sb-item <?= sbActive('paises', $uri) ?>" href="<?= $baseUrl ?>/paises" data-tooltip="Países">
         <span class="sb-icon sb-icon--blue">
-          <img src="<?= $icoAnim ?>paises.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-globe-americas" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Países</span>
       </a>
@@ -217,7 +211,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       <a class="sb-item <?= sbActive('mis-recetas', $uri) && empty($_GET['filtro']) ? 'is-active' : '' ?>"
          href="<?= $baseUrl ?>/mis-recetas" data-tooltip="Dashboard Chef">
         <span class="sb-icon sb-icon--orange">
-          <img src="<?= $icoAnim ?>home.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-speedometer2" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Dashboard</span>
         <?php if (sbActive('mis-recetas', $uri) && empty($_GET['filtro'])): ?>
@@ -280,7 +274,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       </a>
       <a class="sb-item" href="<?= $baseUrl ?>/mis-recetas#valoraciones" data-tooltip="Valoraciones recibidas">
         <span class="sb-icon sb-icon--yellow">
-          <img src="<?= $icoAnim ?>stars.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-star-fill" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Valoraciones</span>
       </a>
@@ -316,7 +310,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       </div>
       <a class="sb-item <?= sbActive('dashboard', $uri) ?>" href="<?= $baseUrl ?>/dashboard" data-tooltip="Mi Inicio">
         <span class="sb-icon sb-icon--orange">
-          <img src="<?= $icoAnim ?>home.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-house-door-fill" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Mi Inicio</span>
         <?php if (sbActive('dashboard', $uri)): ?><span class="sb-dot sb-hide-collapsed"></span><?php endif; ?>
@@ -335,7 +329,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       </a>
       <a class="sb-item <?= sbActive('paises', $uri) ?>" href="<?= $baseUrl ?>/paises" data-tooltip="Países">
         <span class="sb-icon sb-icon--blue">
-          <img src="<?= $icoAnim ?>paises.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-globe-americas" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Países</span>
       </a>
@@ -346,7 +340,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       </div>
       <a class="sb-item <?= sbActive('favoritos', $uri) ?>" href="<?= $baseUrl ?>/favoritos" data-tooltip="Mis favoritos">
         <span class="sb-icon sb-icon--red">
-          <img src="<?= $icoAnim ?>heart.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-heart-fill" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Mis favoritos</span>
       </a>
@@ -358,7 +352,7 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
       <a class="sb-item <?= sbActive('mis-valoraciones', $uri) ?>"
          href="<?= $baseUrl ?>/mis-comentarios?tab=valoraciones" data-tooltip="Mis valoraciones">
         <span class="sb-icon sb-icon--yellow">
-          <img src="<?= $icoAnim ?>stars.gif" alt="" class="sb-ico-img">
+          <i class="bi bi-star-fill" aria-hidden="true"></i>
         </span>
         <span class="sb-label sb-hide-collapsed">Mis valoraciones</span>
       </a>
@@ -442,6 +436,13 @@ $icoSob  = $baseUrl . '/img/Icon/ICON-Sobrantes/';
   </div>
 
 </aside>
+
+<button class="sb-hamburger" id="sbToggle" type="button"
+        aria-label="Abrir menú" aria-controls="sbSidebar" aria-expanded="false">
+  <span class="sb-ham-line"></span>
+  <span class="sb-ham-line"></span>
+  <span class="sb-ham-line"></span>
+</button>
 
 <?php include __DIR__ . '/context_help.php'; ?>
 

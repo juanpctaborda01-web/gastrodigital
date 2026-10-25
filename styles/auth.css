@@ -62,14 +62,10 @@ body.auth-page {
 }
 
 .gd-auth-side-logo {
-    width: 90px;
-    height: 90px;
-    border-radius: 22px;
+    width: min(100%, 260px);
+    height: auto;
     object-fit: contain;
-    background: rgba(255,255,255,.1);
-    padding: .5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    margin-bottom: 1rem;
 }
 
 .gd-auth-side-title {

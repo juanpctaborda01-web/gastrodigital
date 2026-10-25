@@ -28,10 +28,10 @@ include __DIR__ . '/../../assets/topbar.php';
 
     <?php
     $phTag     = 'Gestión';
-    $phTagIcon = 'people-fill';
+    $phTagImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/registro.png';
     $phTitle   = 'Usuarios del sistema';
     $phSub     = count($usuarios) . ' usuarios registrados';
-    $phArt     = 'people-fill';
+    $phArtImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/profile.gif';
     include __DIR__ . '/../../assets/page_header.php';
     ?>
 

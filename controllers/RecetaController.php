@@ -11,9 +11,13 @@ $jsonAcciones = ['favorito', 'valorar', 'comentar', 'seguirChef', 'valorarChef',
 if (in_array($accion, $jsonAcciones)) {
     header('Content-Type: application/json; charset=utf-8');
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
         echo json_encode(['error' => 'Método no permitido']); exit();
     }
-    requireLogin();
+    if (!isLoggedIn()) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Inicia sesión para realizar esta acción.']); exit();
+    }
 
     // Verificar CSRF para acciones que modifican datos
     $tokenPost   = $_POST['csrf_token']    ?? '';
@@ -27,6 +31,7 @@ if (in_array($accion, $jsonAcciones)) {
     $userId = $_SESSION['usuario_id'];
     $rol    = $_SESSION['rol'];
 
+    try {
     switch ($accion) {
         case 'favorito':
             $recetaId = (int)($_POST['receta_id'] ?? 0);
@@ -85,6 +90,11 @@ if (in_array($accion, $jsonAcciones)) {
 
         default:
             echo json_encode(['error' => 'Acción desconocida']);
+    }
+    } catch (Throwable $e) {
+        error_log('[RecetaController] Error en la acción ' . $accion . ': ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'No se pudo completar la acción. Inténtalo de nuevo.']);
     }
     exit();
 }
@@ -159,7 +169,10 @@ if ($accion === 'crear') {
         }
     }
     $model->guardarIngredientes($recetaId, $ingredientes);
-    $model->guardarPasos($recetaId, $_POST['pasos'] ?? []);
+
+    // Normalizar pasos con imagen y duración (chef)
+    $pasosData = normalizarPasosChef($_POST, $_FILES, $recetaId, null);
+    $model->guardarPasos($recetaId, $pasosData);
 
     $_SESSION['exito'] = isset($_POST['publicada']) && !$_POST['publicada']
         ? "Receta \"$titulo\" guardada como borrador."
@@ -233,8 +246,76 @@ if ($accion === 'editar') {
         }
     }
     $model->guardarIngredientes($recetaId, $ingredientes);
-    $model->guardarPasos($recetaId, $_POST['pasos'] ?? []);
+
+    // Normalizar pasos con imagen y duración (chef editar)
+    $pasosData = normalizarPasosChef($_POST, $_FILES, $recetaId, null);
+    $model->guardarPasos($recetaId, $pasosData);
 
     $_SESSION['exito'] = "Receta \"$titulo\" actualizada correctamente.";
     redirect('mis-recetas');
+}
+
+// ── Helper: normalizar pasos del chef con imagen y duración ──────────────────
+// Recibe $_POST y $_FILES, devuelve array listo para guardarPasos().
+// Compatible con la versión anterior que solo enviaba $_POST['pasos'][].
+if (!function_exists('normalizarPasosChef')) {
+    function normalizarPasosChef(array $post, array $files, int $recetaId, ?int $chefId): array
+    {
+        // Nuevo formato: paso_desc[] + paso_duracion[] + paso_imagen[]
+        $descs    = $post['paso_desc']         ?? [];
+        $durs     = $post['paso_duracion']      ?? [];
+        $actuales = $post['paso_imagen_actual'] ?? [];
+
+        // Soporte retrocompatible: vistas chef antiguas envían pasos[] sin desc
+        if (empty($descs) && !empty($post['pasos'])) {
+            $descs    = $post['pasos'];
+            $durs     = [];
+            $actuales = [];
+        }
+
+        $imgNames  = $files['paso_imagen']['name']     ?? [];
+        $imgTmps   = $files['paso_imagen']['tmp_name'] ?? [];
+        $imgErrors = $files['paso_imagen']['error']    ?? [];
+        $imgSizes  = $files['paso_imagen']['size']     ?? [];
+
+        $result = [];
+        foreach ($descs as $i => $desc) {
+            $desc = trim($desc);
+            if ($desc === '') continue;
+
+            $imagen = null;
+            $hayArchivo = isset($imgNames[$i]) && $imgNames[$i] !== ''
+                       && ($imgErrors[$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
+
+            if ($hayArchivo) {
+                $fileSingle = [
+                    'name'     => $imgNames[$i],
+                    'tmp_name' => $imgTmps[$i],
+                    'error'    => $imgErrors[$i],
+                    'size'     => $imgSizes[$i],
+                    'type'     => mime_content_type($imgTmps[$i]) ?: 'image/jpeg',
+                ];
+                $subido = procesarImagenUpload($fileSingle, UPLOAD_PASOS_PATH);
+                if ($subido !== null) {
+                    $imagen = $subido;
+                }
+            }
+
+            if ($imagen === null) {
+                $actual = trim($actuales[$i] ?? '');
+                if ($actual !== '' && is_file(UPLOAD_PASOS_PATH . $actual)) {
+                    $imagen = $actual;
+                }
+            }
+
+            $dur = isset($durs[$i]) && (int)$durs[$i] > 0 ? (int)$durs[$i] : null;
+
+            $result[] = [
+                'descripcion' => $desc,
+                'imagen'      => $imagen,
+                'duracion'    => $dur,
+            ];
+        }
+        return $result;
+    }
 }

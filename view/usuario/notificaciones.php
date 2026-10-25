@@ -11,15 +11,14 @@ unset($_SESSION['exito']);
 
 <main class="py-5">
     <div class="container" style="max-width:960px">
-        <div class="gd-section-hero mt-3 mb-4">
-            <div class="gd-section-hero-body">
-                <span class="section-tag"><i class="bi bi-bell me-1"></i>Actividad de tu cuenta</span>
-                <h1 class="gd-section-hero-title">Notificaciones</h1>
-                <p class="gd-section-hero-sub">
-                    <?= $noLeidas ?> sin leer · <?= count($notificaciones) ?> recientes
-                </p>
-            </div>
-        </div>
+        <?php
+        $phTag     = 'Actividad de tu cuenta';
+        $phTagImg  = BASE_URL . '/img/Icon/Icon-Animados/saludo.gif';
+        $phTitle   = 'Notificaciones';
+        $phSub     = $noLeidas . ' sin leer · ' . count($notificaciones) . ' recientes';
+        $phArtImg  = BASE_URL . '/img/Icon/Icon-Animados/stars.gif';
+        include __DIR__ . '/../../assets/page_header.php';
+        ?>
 
         <?php if ($exito): ?>
             <div class="alert alert-success"><?= htmlspecialchars($exito) ?></div>

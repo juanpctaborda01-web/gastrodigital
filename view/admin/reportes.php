@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../models/categoria.php';
 requireRole(ROL_ADMIN);
 
 $pageTitle  = 'Reportes';
+$extraCss   = 'admin-reportes.css?v=' . filemtime(__DIR__ . '/../../styles/admin-reportes.css');
 $model      = new Receta();
 $catModel   = new Categoria();
 $categorias = $catModel->listarSimple();
@@ -67,6 +68,7 @@ $resultados = [];
 $resumen    = [];
 $datosGraficas = [
     'categorias' => [],
+    'resumenCategorias' => [],
     'dificultades' => [],
     'rendimiento' => [],
 ];
@@ -87,6 +89,14 @@ if ($ejecutar) {
                 $categoria = $fila['categoria'] ?: 'Sin categoría';
                 $dificultad = $fila['dificultad'] ?: 'Sin dificultad';
                 $datosGraficas['categorias'][$categoria] = ($datosGraficas['categorias'][$categoria] ?? 0) + 1;
+                $datosGraficas['resumenCategorias'][$categoria] ??= [
+                    'visitas' => 0,
+                    'favoritos' => 0,
+                    'comentarios' => 0,
+                ];
+                $datosGraficas['resumenCategorias'][$categoria]['visitas'] += (int) $fila['visitas'];
+                $datosGraficas['resumenCategorias'][$categoria]['favoritos'] += (int) $fila['total_favoritos'];
+                $datosGraficas['resumenCategorias'][$categoria]['comentarios'] += (int) $fila['total_comentarios'];
                 $datosGraficas['dificultades'][$dificultad] = ($datosGraficas['dificultades'][$dificultad] ?? 0) + 1;
                 $datosGraficas['rendimiento'][] = [
                     'titulo' => $fila['titulo'],
@@ -113,28 +123,26 @@ if ($ejecutar) {
 <main class="py-4">
 <div class="container">
 
-    <!-- ══ CABECERA ══════════════════════════════════════════════════════════ -->
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
-        <div>
-            <a href="<?= BASE_URL ?>/admin" class="text-muted small">
-                <i class="bi bi-arrow-left me-1"></i>Volver al panel
-            </a>
-            <h2 class="fw-800 mt-1 mb-0">
-                <i class="bi bi-file-earmark-bar-graph me-2" style="color:var(--primary-dark)"></i>Reportes
-            </h2>
-            <p class="text-muted small mb-0">Filtra, analiza y exporta datos de la plataforma</p>
-        </div>
+    <?php
+    $phTag     = 'Análisis';
+    $phTagImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/visitas.png';
+    $phTitle   = 'Reportes';
+    $phSub     = 'Filtra, analiza y exporta datos de la plataforma';
+    $phArtImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/visitas.png';
+    $phBack    = ['label' => 'Volver al panel', 'href' => BASE_URL . '/admin'];
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
-        <!-- Botón exportar CSV -->
-        <?php if ($ejecutar && !empty($resultados)): ?>
-        <?php $csvParams = http_build_query(array_merge($_GET, ['exportar' => '1'])); ?>
+    <?php if ($ejecutar && !empty($resultados)): ?>
+    <?php $csvParams = http_build_query(array_merge($_GET, ['exportar' => '1'])); ?>
+    <div class="d-flex justify-content-end mb-4">
         <a href="<?= BASE_URL ?>/admin/reportes?<?= $csvParams ?>"
            class="btn btn-success fw-700 d-flex align-items-center gap-2">
             <i class="bi bi-file-earmark-arrow-down"></i>
             Exportar CSV (<?= count($resultados) ?> filas)
         </a>
-        <?php endif; ?>
     </div>
+    <?php endif; ?>
 
     <!-- ══ PESTAÑAS DE TIPO ═══════════════════════════════════════════════════ -->
     <ul class="nav nav-tabs mb-4" role="tablist">
@@ -296,7 +304,30 @@ if ($ejecutar) {
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Ver todo
                         </button>
                     </div>
-                    <div style="height:260px"><canvas id="graficaCategorias" aria-label="Recetas por categoría"></canvas></div>
+                    <div class="report-chart-rows" aria-label="Recetas por categoría">
+                        <?php
+                        $totalPorCategoria = max(1, array_sum($datosGraficas['categorias']));
+                        foreach ($datosGraficas['categorias'] as $categoria => $cantidad):
+                            $resumenCategoria = $datosGraficas['resumenCategorias'][$categoria];
+                            $porcentajeCategoria = round(($cantidad / $totalPorCategoria) * 100, 2);
+                        ?>
+                            <button type="button" class="report-chart-select"
+                                    data-category="<?= htmlspecialchars($categoria, ENT_QUOTES, 'UTF-8') ?>"
+                                    data-recipes="<?= $cantidad ?>"
+                                    data-visits="<?= $resumenCategoria['visitas'] ?>"
+                                    data-favorites="<?= $resumenCategoria['favoritos'] ?>"
+                                    data-comments="<?= $resumenCategoria['comentarios'] ?>"
+                                    aria-pressed="false">
+                                <span class="report-chart-heading">
+                                    <span class="text-truncate"><?= htmlspecialchars($categoria) ?></span>
+                                    <strong><?= number_format($cantidad) ?></strong>
+                                </span>
+                                <span class="report-chart-track" aria-hidden="true">
+                                    <span style="width:<?= $porcentajeCategoria ?>%"></span>
+                                </span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
                     <div class="mt-3 p-3 rounded-3" style="background:var(--surface-3)" id="detalleCategoria">
                         <div class="text-muted small">Selecciona una porción para ver sus datos.</div>
                     </div>
@@ -307,7 +338,23 @@ if ($ejecutar) {
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="fw-800 mb-3">Dificultad</h5>
-                    <div style="height:260px"><canvas id="graficaDificultad" aria-label="Recetas por dificultad"></canvas></div>
+                    <div class="report-chart-rows" aria-label="Recetas por dificultad">
+                        <?php
+                        $totalPorDificultad = max(1, array_sum($datosGraficas['dificultades']));
+                        foreach ($datosGraficas['dificultades'] as $dificultad => $cantidad):
+                            $porcentajeDificultad = round(($cantidad / $totalPorDificultad) * 100, 2);
+                        ?>
+                            <div class="report-chart-row">
+                                <span class="report-chart-heading">
+                                    <span><?= htmlspecialchars($dificultad) ?></span>
+                                    <strong><?= number_format($cantidad) ?></strong>
+                                </span>
+                                <span class="report-chart-track" aria-hidden="true">
+                                    <span style="width:<?= $porcentajeDificultad ?>%"></span>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -315,7 +362,33 @@ if ($ejecutar) {
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="fw-800 mb-3">Visitas y favoritos</h5>
-                    <div style="height:260px"><canvas id="graficaRendimiento" aria-label="Visitas y favoritos por receta"></canvas></div>
+                    <?php
+                    $maxVisitas = max(1, max(array_column($datosGraficas['rendimiento'], 'visitas')));
+                    $maxFavoritos = max(1, max(array_column($datosGraficas['rendimiento'], 'favoritos')));
+                    ?>
+                    <div class="report-performance-rows" aria-label="Visitas y favoritos por receta">
+                        <?php foreach ($datosGraficas['rendimiento'] as $receta): ?>
+                            <div class="report-performance-row">
+                                <div class="report-chart-heading">
+                                    <span class="text-truncate" title="<?= htmlspecialchars($receta['titulo']) ?>">
+                                        <?= htmlspecialchars($receta['titulo']) ?>
+                                    </span>
+                                </div>
+                                <div class="report-performance-metric">
+                                    <span><i class="bi bi-eye me-1" aria-hidden="true"></i><?= number_format($receta['visitas']) ?></span>
+                                    <span class="report-chart-track report-chart-track--visits" aria-hidden="true">
+                                        <span style="width:<?= round(($receta['visitas'] / $maxVisitas) * 100, 2) ?>%"></span>
+                                    </span>
+                                </div>
+                                <div class="report-performance-metric">
+                                    <span><i class="bi bi-heart-fill me-1" aria-hidden="true"></i><?= number_format($receta['favoritos']) ?></span>
+                                    <span class="report-chart-track report-chart-track--favorites" aria-hidden="true">
+                                        <span style="width:<?= round(($receta['favoritos'] / $maxFavoritos) * 100, 2) ?>%"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -441,84 +514,33 @@ if ($ejecutar) {
 </main>
 
 <?php if ($ejecutar && $tipo === 'recetas' && !empty($resultados)): ?>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
-const datosGraficas = <?= json_encode($datosGraficas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const coloresGraficas = ['#e56a26', '#f4ab2e', '#c85516', '#da9217', '#f79256', '#fed976', '#b53d26', '#8e7152'];
+document.addEventListener('DOMContentLoaded', () => {
+    const detail = document.getElementById('detalleCategoria');
+    const selectors = document.querySelectorAll('.report-chart-select');
+    const showDefaultDetail = () => {
+        detail.textContent = 'Selecciona una categoría para ver sus datos.';
+        selectors.forEach((selector) => selector.setAttribute('aria-pressed', 'false'));
+    };
 
-const categoriaLabels = Object.keys(datosGraficas.categorias);
-const categoriaValores = Object.values(datosGraficas.categorias);
-const categoriaColores = categoriaLabels.map((_, index) => coloresGraficas[index % coloresGraficas.length]);
-const totalCategorias = categoriaValores.reduce((total, valor) => total + valor, 0);
-let categoriaSeleccionada = null;
+    selectors.forEach((selector) => {
+        selector.addEventListener('click', () => {
+            selectors.forEach((item) => item.setAttribute('aria-pressed', String(item === selector)));
+            detail.replaceChildren();
 
-const graficaCategorias = new Chart(document.getElementById('graficaCategorias'), {
-    type: 'doughnut',
-    data: {
-        labels: categoriaLabels,
-        datasets: [{ data: categoriaValores, backgroundColor: categoriaColores, borderColor: '#fff', borderWidth: 2, hoverOffset: 10 }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        onClick: (_, elementos) => {
-            if (!elementos.length) return;
-            categoriaSeleccionada = elementos[0].index;
-            actualizarCategoriaSeleccionada();
-        },
-        plugins: { legend: { position: 'bottom' } }
-    }
-});
-
-function actualizarCategoriaSeleccionada() {
-    const dataset = graficaCategorias.data.datasets[0];
-    dataset.backgroundColor = categoriaColores.map((color, index) => {
-        if (categoriaSeleccionada === null || index === categoriaSeleccionada) return color;
-        return color + '35';
+            const title = document.createElement('strong');
+            title.textContent = selector.dataset.category;
+            const summary = document.createElement('div');
+            summary.className = 'small text-muted mt-1';
+            summary.textContent = `${selector.dataset.recipes} receta(s)`;
+            const metrics = document.createElement('div');
+            metrics.className = 'small mt-2';
+            metrics.textContent = `${selector.dataset.visits} visitas · ${selector.dataset.favorites} favoritos · ${selector.dataset.comments} comentarios`;
+            detail.append(title, summary, metrics);
+        });
     });
-    graficaCategorias.update();
 
-    if (categoriaSeleccionada === null) {
-        document.getElementById('detalleCategoria').innerHTML = '<div class="text-muted small">Selecciona una porción para ver sus datos.</div>';
-        return;
-    }
-
-    const nombre = categoriaLabels[categoriaSeleccionada];
-    const cantidad = categoriaValores[categoriaSeleccionada];
-    const porcentaje = Math.round((cantidad / totalCategorias) * 100);
-    const filas = datosGraficas.rendimiento.filter(item => item.categoria === nombre);
-    const visitas = filas.reduce((total, item) => total + item.visitas, 0);
-    const favoritos = filas.reduce((total, item) => total + item.favoritos, 0);
-    const comentarios = filas.reduce((total, item) => total + item.comentarios, 0);
-    document.getElementById('detalleCategoria').innerHTML = categoriaSeleccionada === null
-        ? '<div class="text-muted small">Selecciona una porción para ver sus datos.</div>'
-        : `<strong>${nombre}</strong><div class="small text-muted mt-1">${cantidad} receta(s) · ${porcentaje}% del resultado</div><div class="small mt-2"><i class="bi bi-eye me-1"></i>${visitas} visitas · <i class="bi bi-heart-fill text-danger me-1"></i>${favoritos} favoritos · <i class="bi bi-chat-dots me-1"></i>${comentarios} comentarios</div>`;
-}
-
-document.getElementById('reiniciarGrafica').addEventListener('click', () => {
-    categoriaSeleccionada = null;
-    actualizarCategoriaSeleccionada();
-});
-
-new Chart(document.getElementById('graficaDificultad'), {
-    type: 'doughnut',
-    data: {
-        labels: Object.keys(datosGraficas.dificultades),
-        datasets: [{ data: Object.values(datosGraficas.dificultades), backgroundColor: ['#4e9a38', '#f59e0b', '#d94e34'], borderWidth: 0 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-});
-
-new Chart(document.getElementById('graficaRendimiento'), {
-    type: 'bar',
-    data: {
-        labels: datosGraficas.rendimiento.map(item => item.titulo),
-        datasets: [
-            { label: 'Visitas', data: datosGraficas.rendimiento.map(item => item.visitas), backgroundColor: '#e56a26', borderRadius: 5 },
-            { label: 'Favoritos', data: datosGraficas.rendimiento.map(item => item.favoritos), backgroundColor: '#f4ab2e', borderRadius: 5 }
-        ]
-    },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+    document.getElementById('reiniciarGrafica').addEventListener('click', showDefaultDetail);
 });
 </script>
 <?php endif; ?>

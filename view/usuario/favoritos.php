@@ -10,7 +10,6 @@ $model     = new Receta();
 $favoritos = $model->favoritosDeUsuario((int)$_SESSION['usuario_id']);
 $baseUrl   = rtrim(BASE_URL, '/');
 $icoBase   = $baseUrl . '/img/Icon/Categorias/';
-$icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
 ?>
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
@@ -18,25 +17,18 @@ $icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
 <main class="pb-5">
 <div class="container">
 
-    <!-- HERO UNIFICADO -->
-    <div class="gd-section-hero mt-3 mb-4">
-        <div class="gd-section-hero-body">
-            <span class="section-tag">
-                <i class="bi bi-heart-fill me-1"></i>Mi colección
-            </span>
-            <h1 class="gd-section-hero-title">Mis Favoritos</h1>
-            <p class="gd-section-hero-sub">
-                <?= count($favoritos) ?> receta<?= count($favoritos) !== 1 ? 's' : '' ?> guardadas para volver a cocinarlas
-            </p>
-        </div>
-        <div class="gd-section-hero-art d-none d-md-block">
-            <img src="<?= $icoAnim ?>heart.gif" alt="" style="filter:none;opacity:.35">
-        </div>
-    </div>
+    <?php
+    $phTag     = 'Mi colección';
+    $phTagImg  = BASE_URL . '/img/Icon/Icon-Animados/heart.gif';
+    $phTitle   = 'Mis Favoritos';
+    $phSub     = count($favoritos) . ' receta' . (count($favoritos) !== 1 ? 's' : '') . ' guardadas para volver a cocinarlas';
+    $phArtImg  = BASE_URL . '/img/Icon/Icon-Animados/heart.gif';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <?php if (empty($favoritos)): ?>
     <div class="empty-state">
-        <img src="<?= $icoAnim ?>heart.gif" alt="" style="width:80px;height:80px;opacity:.5;margin:0 auto 1rem;display:block">
+        <i class="bi bi-heartbreak" aria-hidden="true" style="font-size:5rem;opacity:.5;display:block;margin:0 auto 1rem"></i>
         <h5>Aún no tienes recetas favoritas</h5>
         <p>Explora el catálogo y guarda las que más te gusten.</p>
         <a href="<?= $baseUrl ?>/recetas" class="btn btn-primary mt-2">
@@ -82,7 +74,6 @@ $icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
                 <?php if ($paisIso): ?>
                 <img src="<?= $baseUrl ?>/img/icon/flags/4x3/<?= $paisIso ?>.svg"
                      alt="País" class="receta-flag-badge position-absolute"
-                     style="top:11px;right:11px;z-index:2"
                      onerror="this.style.display='none'">
                 <?php endif; ?>
 
@@ -93,7 +84,7 @@ $icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
                         <span><i class="bi bi-clock me-1"></i><?= (int)$receta['tiempo_preparacion'] ?> min</span>
                         <?php if (!empty($receta['rating'])): ?>
                         <span class="ms-auto fw-700 d-flex align-items-center gap-1" style="color:var(--gold)">
-                            <img src="<?= $icoAnim ?>stars.gif" alt="" style="width:14px;height:14px">
+                            <i class="bi bi-star-fill" aria-hidden="true"></i>
                             <?= $receta['rating'] ?>
                         </span>
                         <?php endif; ?>
@@ -106,10 +97,12 @@ $icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
                         <i class="bi bi-eye me-1"></i>Ver receta
                     </a>
                     <button type="button"
-                            class="btn btn-sm btn-danger btn-remove-fav"
+                            class="btn btn-sm btn-danger btn-fav"
                             data-id="<?= (int)$receta['id'] ?>"
-                            title="Quitar de favoritos">
-                        <img src="<?= $icoAnim ?>heart.gif" alt="" style="width:16px;height:16px">
+                            title="Quitar de favoritos"
+                            aria-label="Quitar de favoritos"
+                            aria-pressed="true">
+                        <i class="bi bi-heart-fill" aria-hidden="true"></i>
                     </button>
                 </div>
             </article>
@@ -120,38 +113,5 @@ $icoAnim   = $baseUrl . '/img/Icon/Icon-Animados/';
 
 </div>
 </main>
-
-<script>
-const CSRF_TOKEN = '<?= htmlspecialchars(csrfToken()) ?>';
-
-document.querySelectorAll('.btn-remove-fav').forEach(button => {
-    button.addEventListener('click', async () => {
-        button.disabled = true;
-        try {
-            const res = await fetch('<?= $baseUrl ?>/favorito', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ receta_id: button.dataset.id, csrf_token: CSRF_TOKEN })
-            });
-            const data = await res.json();
-            if (data.activo === false) {
-                const card = document.getElementById('favorito-' + button.dataset.id);
-                if (card) {
-                    card.style.transition = 'opacity .3s, transform .3s';
-                    card.style.opacity = '0';
-                    card.style.transform = 'scale(.95)';
-                    setTimeout(() => {
-                        card.remove();
-                        if (!document.querySelector('[id^="favorito-"]')) location.reload();
-                    }, 300);
-                }
-            }
-        } catch (e) {
-            alert('No se pudo quitar el favorito. Intenta de nuevo.');
-        }
-        button.disabled = false;
-    });
-});
-</script>
 
 <?php include __DIR__ . '/../../assets/fooder.php'; ?>

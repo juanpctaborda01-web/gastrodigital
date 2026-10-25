@@ -279,9 +279,12 @@ class Receta {
         $pkU   = $this->pk('usuarios');
         $pkV   = $this->pk('valoraciones');
         $pkCat = $this->pk('categorias');
+        $pkPais = $this->pk('paises');
         $fkValRec = $this->colExists('valoraciones', 'id_receta') ? 'id_receta' : $pkR;
         $fkRecChef = $this->colExists('recetas', 'id_chef') ? 'id_chef' : 'id_chef';
         $fkRecCat  = $this->colExists('recetas', 'id_categoria') ? 'id_categoria' : 'id_categoria';
+        $fkRecPais = $this->colExists('recetas', 'id_pais') ? 'id_pais' : 'pais_id';
+        $isoPais = $this->colExists('paises', 'codigo_iso') ? 'p.codigo_iso' : "''";
 
         $stmt = $this->pdo->prepare("
             SELECT r.*, r.$pkR AS id,
@@ -290,11 +293,14 @@ class Receta {
                    u.bio AS chef_bio,
                    u.$pkU AS chef_id,
                    COALESCE(c_cat.nombre, 'Otros') AS categoria,
+                   p.nombre AS pais_nombre,
+                   $isoPais AS pais_iso,
                    ROUND(AVG(v.puntuacion), 1) AS rating,
                    COUNT(DISTINCT v.$pkV) AS total_valoraciones
             FROM recetas r
             LEFT JOIN usuarios u       ON u.$pkU = r.$fkRecChef
             LEFT JOIN categorias c_cat ON c_cat.$pkCat = r.$fkRecCat
+            LEFT JOIN paises p         ON p.$pkPais = r.$fkRecPais
             LEFT JOIN valoraciones v   ON v.$fkValRec = r.$pkR
             WHERE r.$pkR = ?
             GROUP BY r.$pkR
@@ -386,10 +392,22 @@ class Receta {
 
     public function guardarPasos(int $recetaId, array $pasos): void {
         $this->pdo->prepare("DELETE FROM pasos WHERE id_receta = ?")->execute([$recetaId]);
-        $stmt = $this->pdo->prepare("INSERT INTO pasos (id_receta, numero, descripcion) VALUES (?,?,?)");
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO pasos (id_receta, numero, descripcion, imagen, duracion) VALUES (?,?,?,?,?)"
+        );
         foreach ($pasos as $i => $paso) {
-            if (empty(trim($paso))) continue;
-            $stmt->execute([$recetaId, $i + 1, trim($paso)]);
+            // Acepta string simple (retrocompatibilidad chef) o array con campos extendidos
+            if (is_string($paso)) {
+                if (trim($paso) === '') continue;
+                $stmt->execute([$recetaId, $i + 1, trim($paso), null, null]);
+            } else {
+                $desc = trim($paso['descripcion'] ?? '');
+                if ($desc === '') continue;
+                $img  = !empty($paso['imagen'])   ? trim($paso['imagen'])       : null;
+                $dur  = isset($paso['duracion']) && (int)$paso['duracion'] > 0
+                        ? (int)$paso['duracion'] : null;
+                $stmt->execute([$recetaId, $i + 1, $desc, $img, $dur]);
+            }
         }
     }
 
@@ -408,6 +426,22 @@ class Receta {
         $stmt = $this->pdo->prepare("SELECT 1 FROM favoritos WHERE id_usuario = ? AND id_receta = ?");
         $stmt->execute([$userId, $recetaId]);
         return (bool)$stmt->fetch();
+    }
+
+    public function favoritosIds(int $userId, array $recetaIds): array {
+        $recetaIds = array_values(array_unique(array_filter(array_map('intval', $recetaIds), static fn(int $id): bool => $id > 0)));
+        if (!$recetaIds) return [];
+
+        $pkR = $this->pk('recetas');
+        $fkFavRec = $this->colExists('favoritos', 'id_receta') ? 'id_receta' : $pkR;
+        $placeholders = implode(',', array_fill(0, count($recetaIds), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT f.$fkFavRec
+            FROM favoritos f
+            WHERE f.id_usuario = ? AND f.$fkFavRec IN ($placeholders)
+        ");
+        $stmt->execute(array_merge([$userId], $recetaIds));
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
 
     public function favoritosDeUsuario(int $userId): array {
@@ -439,7 +473,8 @@ class Receta {
             LEFT JOIN usuarios u       ON u.$pkU = r.$fkRecChef
             LEFT JOIN valoraciones v   ON v.$fkValRec = r.$pkR
             WHERE f.$fkFavUsr = ?
-            GROUP BY r.$pkR ORDER BY f.created_at DESC
+            GROUP BY r.$pkR
+            ORDER BY r.created_at DESC, r.$pkR DESC
         ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll();
@@ -470,27 +505,75 @@ class Receta {
     }
 
     public function reportar(int $userId, string $tipo, int $objetivoId, string $motivo, string $descripcion): array {
-        if (trim($motivo) === '') return ['error' => 'Selecciona un motivo'];
-        $idReceta     = ($tipo === 'receta')     ? $objetivoId : null;
-        $idComentario = ($tipo === 'comentario') ? $objetivoId : null;
-        $idUsuario    = ($tipo === 'usuario')    ? $objetivoId : null;
-        $idValoracion = ($tipo === 'valoracion') ? $objetivoId : null;
-        $this->pdo->prepare("
-            INSERT INTO reportes (id_receta,id_comentario,id_usuario,id_valoracion,reportado_por,motivo,descripcion,estado,created_at)
-            VALUES (?,?,?,?,?,?,?,'pendiente',NOW())
-        ")->execute([$idReceta,$idComentario,$idUsuario,$idValoracion,$userId,$motivo,trim($descripcion)]);
-        $admins = $this->pdo->query("SELECT id_usuario FROM usuarios WHERE rol = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
-        require_once __DIR__ . '/Notificacion.php';
-        $notificacion = new Notificacion();
-        foreach ($admins as $adminId) {
-            $notificacion->crear(
-                (int)$adminId,
-                'reporte',
-                'Se recibió un nuevo reporte para moderación.',
-                'index.php?route=admin/reportes'
-            );
+        $motivo = trim($motivo);
+        $descripcion = trim($descripcion);
+        $objetivos = [
+            'receta' => ['recetas', $this->pk('recetas')],
+            'comentario' => ['comentarios', $this->pk('comentarios')],
+            'usuario' => ['usuarios', $this->pk('usuarios')],
+            'valoracion' => ['valoraciones', $this->pk('valoraciones')],
+        ];
+
+        if (!isset($objetivos[$tipo]) || $objetivoId < 1) {
+            return ['error' => 'El contenido que intentas reportar no es válido.'];
         }
-        return ['exito' => true];
+        if ($motivo === '') {
+            return ['error' => 'Selecciona un motivo.'];
+        }
+
+        [$tablaObjetivo, $pkObjetivo] = $objetivos[$tipo];
+        $stmtObjetivo = $this->pdo->prepare("SELECT 1 FROM $tablaObjetivo WHERE $pkObjetivo = ?");
+        $stmtObjetivo->execute([$objetivoId]);
+        if (!$stmtObjetivo->fetchColumn()) {
+            return ['error' => 'El contenido que intentas reportar ya no está disponible.'];
+        }
+
+        $idReceta = $tipo === 'receta' ? $objetivoId : null;
+        $idComentario = $tipo === 'comentario' ? $objetivoId : null;
+        $idUsuario = $tipo === 'usuario' ? $objetivoId : null;
+        $idValoracion = $tipo === 'valoracion' ? $objetivoId : null;
+        $iniciaTransaccion = !$this->pdo->inTransaction();
+
+        try {
+            if ($iniciaTransaccion) {
+                $this->pdo->beginTransaction();
+            }
+
+            $this->pdo->prepare("
+                INSERT INTO reportes
+                    (id_receta, id_comentario, id_usuario, id_valoracion, reportado_por,
+                     motivo, descripcion, estado, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', NOW())
+            ")->execute([
+                $idReceta, $idComentario, $idUsuario, $idValoracion, $userId,
+                mb_substr($motivo, 0, 120, 'UTF-8'), mb_substr($descripcion, 0, 2000, 'UTF-8'),
+            ]);
+
+            $admins = $this->pdo->query(
+                "SELECT id_usuario FROM usuarios WHERE rol = 'admin' AND activo = 1"
+            )->fetchAll(PDO::FETCH_COLUMN);
+            require_once __DIR__ . '/Notificacion.php';
+            $notificacion = new Notificacion();
+            foreach ($admins as $adminId) {
+                $notificacion->crear(
+                    (int)$adminId,
+                    'reporte',
+                    'Se recibió un nuevo reporte para moderación.',
+                    'index.php?route=admin/moderacion&tab=reportes'
+                );
+            }
+
+            if ($iniciaTransaccion) {
+                $this->pdo->commit();
+            }
+            return ['exito' => true];
+        } catch (Throwable $e) {
+            if ($iniciaTransaccion && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log('[Receta] No se pudo guardar el reporte: ' . $e->getMessage());
+            return ['error' => 'No se pudo enviar el reporte. Inténtalo de nuevo.'];
+        }
     }
 
     private function notificarChefReceta(int $recetaId, int $actorId, string $tipo, string $prefijo): void {
@@ -531,20 +614,43 @@ class Receta {
     }
 
     public function stats(): array {
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) AS total,
+                   COALESCE(SUM(publicada = 1), 0) AS publicadas,
+                   COUNT(DISTINCT id_categoria) AS categorias
+            FROM recetas
+        ");
+        $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
         return [
-            'total'      => (int)$this->pdo->query("SELECT COUNT(*) FROM recetas")->fetchColumn(),
-            'publicadas' => (int)$this->pdo->query("SELECT COUNT(*) FROM recetas WHERE publicada=1")->fetchColumn(),
-            'categorias' => (int)$this->pdo->query("SELECT COUNT(DISTINCT id_categoria) FROM recetas")->fetchColumn(),
+            'total' => (int) $stats['total'],
+            'publicadas' => (int) $stats['publicadas'],
+            'categorias' => (int) $stats['categorias'],
         ];
     }
 
     public function statsAdmin(): array {
-        $base = $this->stats();
-        $base['total_visitas']     = (int)$this->pdo->query("SELECT COALESCE(SUM(visitas),0) FROM recetas")->fetchColumn();
-        $base['total_comentarios'] = (int)$this->pdo->query("SELECT COUNT(*) FROM comentarios")->fetchColumn();
-        $base['total_valoraciones']= (int)$this->pdo->query("SELECT COUNT(*) FROM valoraciones")->fetchColumn();
-        $base['rating_global']     = round((float)$this->pdo->query("SELECT COALESCE(AVG(puntuacion),0) FROM valoraciones")->fetchColumn(), 1);
-        return $base;
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) AS total,
+                   COALESCE(SUM(publicada = 1), 0) AS publicadas,
+                   COUNT(DISTINCT id_categoria) AS categorias,
+                   COALESCE(SUM(visitas), 0) AS total_visitas,
+                   (SELECT COUNT(*) FROM comentarios) AS total_comentarios,
+                   (SELECT COUNT(*) FROM valoraciones) AS total_valoraciones,
+                   COALESCE((SELECT ROUND(AVG(puntuacion), 1) FROM valoraciones), 0) AS rating_global
+            FROM recetas
+        ");
+        $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return [
+            'total' => (int) $stats['total'],
+            'publicadas' => (int) $stats['publicadas'],
+            'categorias' => (int) $stats['categorias'],
+            'total_visitas' => (int) $stats['total_visitas'],
+            'total_comentarios' => (int) $stats['total_comentarios'],
+            'total_valoraciones' => (int) $stats['total_valoraciones'],
+            'rating_global' => (float) $stats['rating_global'],
+        ];
     }
 
     public function masVistas(int $limite = 8): array {
@@ -638,20 +744,24 @@ class Receta {
         $pkV   = $this->pk('valoraciones');
         $pkF   = $this->pk('favoritos');
         $pkCom = $this->pk('comentarios');
+        $pkPais = $this->pk('paises');
         $fkChef   = $this->colExists('recetas','id_chef')        ? 'id_chef'    : 'id_chef';
         $fkRecCat = $this->colExists('recetas','id_categoria')   ? 'id_categoria':'id_categoria';
+        $fkRecPais = $this->colExists('recetas','id_pais')       ? 'id_pais'    : 'pais_id';
         $fkValRec = $this->colExists('valoraciones','id_receta') ? 'id_receta'  : $pkR;
         $fkFavRec = $this->colExists('favoritos','id_receta')    ? 'id_receta'  : $pkR;
         $fkComRec = $this->colExists('comentarios','id_receta')  ? 'id_receta'  : $pkR;
         $stmt = $this->pdo->prepare("
             SELECT r.*, r.$pkR AS id,
                    c_cat.nombre AS categoria,
+                   p.nombre AS pais_nombre,
                    ROUND(AVG(v.puntuacion), 1) AS rating,
                    COUNT(DISTINCT v.$pkV) AS total_valoraciones,
                    COUNT(DISTINCT f.$pkF) AS total_favoritos,
                    COUNT(DISTINCT c.$pkCom) AS total_comentarios
             FROM recetas r
             LEFT JOIN categorias c_cat ON c_cat.$pkCat = r.$fkRecCat
+            LEFT JOIN paises p         ON p.$pkPais = r.$fkRecPais
             LEFT JOIN valoraciones v   ON v.$fkValRec = r.$pkR
             LEFT JOIN favoritos f      ON f.$fkFavRec = r.$pkR
             LEFT JOIN comentarios c    ON c.$fkComRec = r.$pkR
@@ -816,9 +926,6 @@ class Receta {
         $pkCat = $this->pk('categorias');
         $pkP   = $this->pk('paises');
         $pkU   = $this->pk('usuarios');
-        $pkV   = $this->pk('valoraciones');
-        $pkF   = $this->pk('favoritos');
-        $pkCom = $this->pk('comentarios');
         $fkChef   = $this->colExists('recetas','id_chef')        ? 'id_chef'    : 'id_chef';
         $fkRecCat = $this->colExists('recetas','id_categoria')   ? 'id_categoria':'id_categoria';
         $fkRecPais= $this->colExists('recetas','id_pais')        ? 'id_pais'    : 'id_pais';
@@ -832,20 +939,35 @@ class Receta {
                    c_cat.nombre AS categoria, c_cat.color AS cat_color, c_cat.icono AS cat_icono,
                    $isoCol
                    u.nombre AS chef_nombre,
-                   ROUND(AVG(v.puntuacion), 1) AS rating,
-                   COUNT(DISTINCT v.$pkV)   AS total_valoraciones,
-                   COUNT(DISTINCT f.$pkF)   AS total_favoritos,
-                   COUNT(DISTINCT cm.$pkCom) AS total_comentarios,
-                   (r.visitas + COUNT(DISTINCT f.$pkF)*3 + COUNT(DISTINCT cm.$pkCom)*2 + COUNT(DISTINCT v.$pkV)*2) AS score
+                   v.rating,
+                   COALESCE(v.total_valoraciones, 0) AS total_valoraciones,
+                   COALESCE(f.total_favoritos, 0) AS total_favoritos,
+                   COALESCE(cm.total_comentarios, 0) AS total_comentarios,
+                   (r.visitas + COALESCE(f.total_favoritos, 0)*3
+                       + COALESCE(cm.total_comentarios, 0)*2
+                       + COALESCE(v.total_valoraciones, 0)*2) AS score
             FROM recetas r
             LEFT JOIN categorias c_cat ON c_cat.$pkCat = r.$fkRecCat
             LEFT JOIN paises p_mp      ON p_mp.$pkP  = r.$fkRecPais
             LEFT JOIN usuarios u       ON u.$pkU = r.$fkChef
-            LEFT JOIN valoraciones v   ON v.$fkValRec = r.$pkR
-            LEFT JOIN favoritos f      ON f.$fkFavRec = r.$pkR
-            LEFT JOIN comentarios cm   ON cm.$fkComRec = r.$pkR
+            LEFT JOIN (
+                SELECT $fkValRec AS id_receta, ROUND(AVG(puntuacion), 1) AS rating,
+                       COUNT(*) AS total_valoraciones
+                FROM valoraciones
+                GROUP BY $fkValRec
+            ) v ON v.id_receta = r.$pkR
+            LEFT JOIN (
+                SELECT $fkFavRec AS id_receta, COUNT(*) AS total_favoritos
+                FROM favoritos
+                GROUP BY $fkFavRec
+            ) f ON f.id_receta = r.$pkR
+            LEFT JOIN (
+                SELECT $fkComRec AS id_receta, COUNT(*) AS total_comentarios
+                FROM comentarios
+                GROUP BY $fkComRec
+            ) cm ON cm.id_receta = r.$pkR
             WHERE r.publicada = 1
-            GROUP BY r.$pkR ORDER BY score DESC LIMIT ?
+            ORDER BY score DESC LIMIT ?
         ");
         $stmt->execute([$limite]);
         return $stmt->fetchAll();
@@ -1124,13 +1246,22 @@ class Receta {
             // 3 — Pasos
             if (!empty($d['pasos'])) {
                 $stmtP = $this->pdo->prepare("
-                    INSERT INTO pasos ($fkPRec, numero, descripcion)
-                    VALUES (?,?,?)
+                    INSERT INTO pasos ($fkPRec, numero, descripcion, imagen, duracion)
+                    VALUES (?,?,?,?,?)
                 ");
-                foreach ($d['pasos'] as $num => $desc) {
-                    $desc = trim(is_array($desc) ? ($desc['descripcion'] ?? '') : $desc);
+                foreach ($d['pasos'] as $num => $paso) {
+                    if (is_string($paso)) {
+                        $desc = trim($paso);
+                        $img  = null;
+                        $dur  = null;
+                    } else {
+                        $desc = trim($paso['descripcion'] ?? '');
+                        $img  = !empty($paso['imagen'])   ? trim($paso['imagen'])    : null;
+                        $dur  = isset($paso['duracion']) && (int)$paso['duracion'] > 0
+                                ? (int)$paso['duracion'] : null;
+                    }
                     if ($desc === '') continue;
-                    $stmtP->execute([$recetaId, $num + 1, $desc]);
+                    $stmtP->execute([$recetaId, $num + 1, $desc, $img, $dur]);
                 }
             }
 
@@ -1227,13 +1358,22 @@ class Receta {
             $this->pdo->prepare("DELETE FROM pasos WHERE $fkPRec = ?")->execute([$id]);
             if (!empty($d['pasos'])) {
                 $stmtP = $this->pdo->prepare("
-                    INSERT INTO pasos ($fkPRec, numero, descripcion)
-                    VALUES (?,?,?)
+                    INSERT INTO pasos ($fkPRec, numero, descripcion, imagen, duracion)
+                    VALUES (?,?,?,?,?)
                 ");
-                foreach ($d['pasos'] as $num => $desc) {
-                    $desc = trim(is_array($desc) ? ($desc['descripcion'] ?? '') : $desc);
+                foreach ($d['pasos'] as $num => $paso) {
+                    if (is_string($paso)) {
+                        $desc = trim($paso);
+                        $img  = null;
+                        $dur  = null;
+                    } else {
+                        $desc = trim($paso['descripcion'] ?? '');
+                        $img  = !empty($paso['imagen'])   ? trim($paso['imagen'])    : null;
+                        $dur  = isset($paso['duracion']) && (int)$paso['duracion'] > 0
+                                ? (int)$paso['duracion'] : null;
+                    }
                     if ($desc === '') continue;
-                    $stmtP->execute([$id, $num + 1, $desc]);
+                    $stmtP->execute([$id, $num + 1, $desc, $img, $dur]);
                 }
             }
 

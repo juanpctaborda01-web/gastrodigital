@@ -5,7 +5,7 @@ requireRole(ROL_ADMIN);
 $pageTitle = 'Moderación';
 $pdo = Conexion::getInstancia()->getPDO();
 
-// ── Acción AJAX: eliminar comentario o valoración ─────────────────────────────
+// ── Acciones AJAX de moderación ───────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion_mod'])) {
     header('Content-Type: application/json; charset=utf-8');
     $tokenPost   = $_POST['csrf_token']    ?? '';
@@ -25,18 +25,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion_mod'])) {
         } elseif ($accion === 'del_valoracion') {
             $pdo->prepare("DELETE FROM valoraciones WHERE id_valoracion = ?")->execute([$id]);
             echo json_encode(['exito' => true]);
+        } elseif ($accion === 'estado_reporte') {
+            $estado = $_POST['estado'] ?? '';
+            if (!in_array($estado, ['revisado', 'desestimado'], true)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Estado de reporte inválido']);
+                exit();
+            }
+            $stmt = $pdo->prepare("
+                UPDATE reportes
+                SET estado = ?, revisado_por = ?
+                WHERE id_reporte = ?
+            ");
+            $stmt->execute([$estado, (int)$_SESSION['usuario_id'], $id]);
+            if ($stmt->rowCount() === 0) {
+                $existe = $pdo->prepare("SELECT 1 FROM reportes WHERE id_reporte = ?");
+                $existe->execute([$id]);
+                if (!$existe->fetchColumn()) {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'El reporte ya no existe']);
+                    exit();
+                }
+            }
+            echo json_encode(['exito' => true, 'estado' => $estado]);
         } else {
             echo json_encode(['error' => 'Acción desconocida']);
         }
     } catch (Throwable $e) {
+        error_log('[Moderacion] No se pudo procesar la acción ' . $accion . ': ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['error' => 'Error al eliminar']);
+        echo json_encode(['error' => 'No se pudo completar la acción']);
     }
     exit();
 }
 
 // ── Comentarios recientes para moderar ───────────────────────────────────────
 $comentarios = [];
+$errorComentarios = false;
 try {
     $stmtCom = $pdo->query("
         SELECT c.id_comentario AS id, c.contenido, c.created_at,
@@ -48,10 +73,14 @@ try {
         ORDER BY c.created_at DESC LIMIT 50
     ");
     $comentarios = $stmtCom->fetchAll();
-} catch (Throwable $e) {}
+} catch (Throwable $e) {
+    $errorComentarios = true;
+    error_log('[Moderacion] No se pudieron cargar comentarios: ' . $e->getMessage());
+}
 
 // ── Valoraciones recientes ────────────────────────────────────────────────────
 $valoraciones = [];
+$errorValoraciones = false;
 try {
     $stmtVal = $pdo->query("
         SELECT v.id_valoracion AS id, v.puntuacion, v.comentario, v.created_at,
@@ -62,24 +91,40 @@ try {
         ORDER BY v.created_at DESC LIMIT 50
     ");
     $valoraciones = $stmtVal->fetchAll();
-} catch (Throwable $e) {}
+} catch (Throwable $e) {
+    $errorValoraciones = true;
+    error_log('[Moderacion] No se pudieron cargar valoraciones: ' . $e->getMessage());
+}
 
 // ── Reportes pendientes ───────────────────────────────────────────────────────
 $reportes = [];
+$errorReportes = false;
 try {
     $stmtRep = $pdo->query("
         SELECT rep.id_reporte AS id, rep.motivo, rep.descripcion, rep.estado, rep.created_at,
                rep.id_receta, rep.id_comentario, rep.id_valoracion,
                rep.reportado_por,
                u_rep.nombre AS reportado_por_nombre,
-               r.titulo AS receta_titulo
+               r.titulo AS receta_titulo,
+               c.contenido AS comentario_reportado,
+               v.puntuacion AS valoracion_reportada,
+               v.comentario AS comentario_valoracion,
+               u_obj.nombre AS usuario_reportado
         FROM reportes rep
         LEFT JOIN usuarios u_rep ON u_rep.id_usuario = rep.reportado_por
         LEFT JOIN recetas  r     ON r.id_receta = rep.id_receta
-        ORDER BY rep.estado ASC, rep.created_at DESC LIMIT 100
+        LEFT JOIN comentarios c ON c.id_comentario = rep.id_comentario
+        LEFT JOIN valoraciones v ON v.id_valoracion = rep.id_valoracion
+        LEFT JOIN usuarios u_obj ON u_obj.id_usuario = rep.id_usuario
+        ORDER BY CASE WHEN rep.estado = 'pendiente' THEN 0 ELSE 1 END,
+                 rep.created_at DESC
+        LIMIT 100
     ");
     $reportes = $stmtRep->fetchAll();
-} catch (Throwable $e) {}
+} catch (Throwable $e) {
+    $errorReportes = true;
+    error_log('[Moderacion] No se pudieron cargar reportes: ' . $e->getMessage());
+}
 
 $pendientes = array_filter($reportes, fn($r) => $r['estado'] === 'pendiente');
 
@@ -113,13 +158,13 @@ include __DIR__ . '/../../assets/topbar.php';
 
     <?php
     $phTag     = 'Moderación';
-    $phTagIcon = 'shield-check';
+    $phTagImg  = $baseUrl . '/img/Icon/ICON-Sobrantes/moderador.png';
     $phTitle   = 'Moderación de contenido';
     $phSub     = 'Gestiona comentarios, valoraciones y reportes de usuarios'
                . (count($pendientes) > 0
                   ? ' · <span class="badge rounded-pill" style="background:rgba(192,57,43,.18);color:#c0392b;font-size:.72rem">' . count($pendientes) . ' reporte' . (count($pendientes) !== 1 ? 's' : '') . ' pendiente' . (count($pendientes) !== 1 ? 's' : '') . '</span>'
                   : '');
-    $phArt     = 'shield-fill';
+    $phArtImg  = $baseUrl . '/img/Icon/ICON-Sobrantes/moderador.png';
     include __DIR__ . '/../../assets/page_header.php';
     ?>
 
@@ -228,7 +273,11 @@ include __DIR__ . '/../../assets/topbar.php';
             </div>
         </div>
         <div class="card-body p-0">
-            <?php if (empty($comentarios)): ?>
+            <?php if ($errorComentarios): ?>
+            <div class="alert alert-danger m-3 mb-0" role="alert">
+                No se pudieron cargar los comentarios. Recarga la página o revisa el registro del servidor.
+            </div>
+            <?php elseif (empty($comentarios)): ?>
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-chat-dots fs-1 opacity-25 d-block mb-2"></i>
                 <p class="mb-0">No hay comentarios para moderar.</p>
@@ -316,7 +365,11 @@ include __DIR__ . '/../../assets/topbar.php';
             </div>
         </div>
         <div class="card-body p-0">
-            <?php if (empty($valoraciones)): ?>
+            <?php if ($errorValoraciones): ?>
+            <div class="alert alert-danger m-3 mb-0" role="alert">
+                No se pudieron cargar las valoraciones. Recarga la página o revisa el registro del servidor.
+            </div>
+            <?php elseif (empty($valoraciones)): ?>
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-star fs-1 opacity-25 d-block mb-2"></i>
                 <p class="mb-0">No hay valoraciones para moderar.</p>
@@ -401,7 +454,11 @@ include __DIR__ . '/../../assets/topbar.php';
             </div>
         </div>
         <div class="card-body p-0">
-            <?php if (empty($reportes)): ?>
+            <?php if ($errorReportes): ?>
+            <div class="alert alert-danger m-3 mb-0" role="alert">
+                No se pudieron cargar los reportes. Recarga la página o revisa el registro del servidor.
+            </div>
+            <?php elseif (empty($reportes)): ?>
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-flag fs-1 opacity-25 d-block mb-2"></i>
                 <p class="mb-0">No hay reportes registrados.</p>
@@ -418,11 +475,12 @@ include __DIR__ . '/../../assets/topbar.php';
                             <th>Receta</th>
                             <th>Estado</th>
                             <th>Fecha</th>
+                            <th class="text-center pe-4">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($reportes as $rep): ?>
-                        <tr>
+                        <tr id="reporte-row-<?= (int)$rep['id'] ?>">
                             <td class="ps-4">
                                 <span class="fw-700 small"><?= htmlspecialchars($rep['reportado_por_nombre'] ?? 'Desconocido') ?></span>
                             </td>
@@ -438,6 +496,22 @@ include __DIR__ . '/../../assets/topbar.php';
                                 <p class="mb-0 small text-muted" style="max-width:250px">
                                     <?= htmlspecialchars(mb_substr($rep['descripcion'] ?? '', 0, 120)) ?>
                                 </p>
+                                <?php if ($rep['comentario_reportado']): ?>
+                                <p class="mb-0 mt-1 small text-body" style="max-width:250px">
+                                    Comentario: <?= htmlspecialchars(mb_substr($rep['comentario_reportado'], 0, 120)) ?>
+                                </p>
+                                <?php elseif ($rep['valoracion_reportada'] !== null): ?>
+                                <p class="mb-0 mt-1 small text-body">
+                                    Valoración: <?= (int)$rep['valoracion_reportada'] ?>/5
+                                    <?= !empty($rep['comentario_valoracion'])
+                                        ? ' · ' . htmlspecialchars(mb_substr($rep['comentario_valoracion'], 0, 100))
+                                        : '' ?>
+                                </p>
+                                <?php elseif ($rep['usuario_reportado']): ?>
+                                <p class="mb-0 mt-1 small text-body">
+                                    Usuario: <?= htmlspecialchars($rep['usuario_reportado']) ?>
+                                </p>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?php if ($rep['receta_titulo']): ?>
@@ -450,12 +524,33 @@ include __DIR__ . '/../../assets/topbar.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <span class="badge rounded-pill <?= $rep['estado'] === 'pendiente' ? 'bg-warning text-dark' : 'bg-success' ?>"
+                                <?php
+                                $estadoColor = match ($rep['estado']) {
+                                    'pendiente' => 'bg-warning text-dark',
+                                    'desestimado' => 'bg-secondary',
+                                    default => 'bg-success',
+                                };
+                                ?>
+                                <span class="badge rounded-pill <?= $estadoColor ?>"
                                       style="font-size:.7rem">
                                     <?= ucfirst($rep['estado']) ?>
                                 </span>
                             </td>
                             <td><span class="text-muted small"><?= date('d/m/Y', strtotime($rep['created_at'])) ?></span></td>
+                            <td class="text-center pe-4">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Resolver reporte">
+                                    <button type="button" class="btn btn-outline-success reporte-estado-btn"
+                                            data-id="<?= (int)$rep['id'] ?>" data-estado="revisado"
+                                            title="Marcar como revisado" aria-label="Marcar como revisado">
+                                        <i class="bi bi-check2"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary reporte-estado-btn"
+                                            data-id="<?= (int)$rep['id'] ?>" data-estado="desestimado"
+                                            title="Desestimar reporte" aria-label="Desestimar reporte">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -555,6 +650,34 @@ document.querySelectorAll('.mod-del-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         pendingBtn = btn;
         new bootstrap.Modal(document.getElementById('modalConfirmMod')).show();
+    });
+});
+
+document.querySelectorAll('.reporte-estado-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const estadoOriginal = btn.dataset.estado;
+        btn.disabled = true;
+        try {
+            const response = await fetch(location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    accion_mod: 'estado_reporte',
+                    id: btn.dataset.id,
+                    estado: estadoOriginal,
+                    csrf_token: CSRF_TOKEN
+                })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.exito) {
+                throw new Error(data.error || 'No se pudo actualizar el reporte.');
+            }
+            showToast(estadoOriginal === 'revisado' ? 'Reporte marcado como revisado' : 'Reporte desestimado', true);
+            setTimeout(() => location.reload(), 500);
+        } catch (error) {
+            showToast(error.message || 'Error de conexión', false);
+            btn.disabled = false;
+        }
     });
 });
 

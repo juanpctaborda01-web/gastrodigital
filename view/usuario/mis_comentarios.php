@@ -124,30 +124,15 @@ $csrfTok = csrfToken();
     </div>
     <?php endif; ?>
 
-    <!-- ══ HEADER HERO ═════════════════════════════════════════════════════ -->
-    <div class="mc-header mt-3 mb-4">
-        <div class="mc-header-icon">
-            <i class="bi bi-chat-left-heart-fill"></i>
-        </div>
-        <div class="mc-header-text">
-            <span class="section-tag" style="background:rgba(232,168,56,.12);color:rgba(255,220,120,.9)">
-                <i class="bi bi-activity me-1"></i>Mi actividad
-            </span>
-            <h1 class="mc-title">Mis comentarios y valoraciones</h1>
-            <p class="mc-subtitle">Todo lo que has escrito y puntuado en GastroDigital</p>
-        </div>
-        <div class="mc-stats">
-            <div class="mc-stat">
-                <span class="mc-stat-num"><?= count($comentarios) ?></span>
-                <span class="mc-stat-label">Comentarios</span>
-            </div>
-            <div class="mc-stat-sep"></div>
-            <div class="mc-stat">
-                <span class="mc-stat-num" style="color:var(--gold)"><?= count($valoraciones) ?></span>
-                <span class="mc-stat-label">Valoraciones</span>
-            </div>
-        </div>
-    </div>
+    <?php
+    $phTag     = 'Mi actividad';
+    $phTagImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/comentario.png';
+    $phTitle   = 'Mis comentarios y valoraciones';
+    $phSub     = count($comentarios) . ' comentarios · ' . count($valoraciones)
+               . ' valoraciones en GastroDigital';
+    $phArtImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/comentario.png';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <!-- ══ PESTAÑAS ════════════════════════════════════════════════════════ -->
     <div class="mc-tabs mb-4" role="tablist">
@@ -417,39 +402,6 @@ $csrfTok = csrfToken();
 </div>
 
 <style>
-/* ── Header ── */
-.mc-header {
-    display: flex; align-items: center; gap: 1.1rem;
-    flex-wrap: wrap;
-    padding: 1.4rem 1.75rem;
-    background: linear-gradient(130deg, #2e1a0a 0%, #5c2d0e 50%, #3b1a06 100%);
-    border-radius: var(--r-lg);
-    box-shadow: 0 6px 24px rgba(0,0,0,.18);
-    position: relative; overflow: hidden;
-}
-.mc-header::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 85% 50%, rgba(232,168,56,.14) 0%, transparent 60%);
-    pointer-events: none;
-}
-.mc-header-icon {
-    width: 52px; height: 52px; border-radius: 13px;
-    background: linear-gradient(135deg, var(--gold), var(--orange));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; color: #fff;
-    box-shadow: 0 4px 14px rgba(211,84,0,.35); flex-shrink: 0;
-    position: relative; z-index: 1;
-}
-.mc-header-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
-.mc-title { font-size: clamp(1.05rem,2.5vw,1.35rem); font-weight: 800; color: #fff; margin: .25rem 0 .15rem; }
-.mc-subtitle { color: rgba(255,255,255,.5); font-size: .82rem; margin: 0; }
-.mc-stats { display: flex; align-items: center; gap: 1.2rem; position: relative; z-index: 1; }
-.mc-stat { text-align: center; }
-.mc-stat-num { display: block; font-size: 1.5rem; font-weight: 800; color: #fff; line-height: 1; }
-.mc-stat-label { font-size: .67rem; color: rgba(255,255,255,.45); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-.mc-stat-sep { width: 1px; height: 36px; background: rgba(255,255,255,.15); }
-
 /* ── Tabs ── */
 .mc-tabs { display: flex; gap: .5rem; border-bottom: 2px solid var(--cream-3); padding-bottom: 0; }
 .mc-tab {
@@ -559,8 +511,6 @@ $csrfTok = csrfToken();
 
 /* Responsive */
 @media (max-width: 576px) {
-    .mc-header { padding: 1.1rem; }
-    .mc-stats  { width: 100%; justify-content: center; }
     .mc-item   { flex-wrap: wrap; }
     .mc-item-img { width: 52px; height: 44px; }
     .mc-item-actions { flex-direction: row; }

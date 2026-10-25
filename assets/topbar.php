@@ -30,8 +30,7 @@ if (!isset($topbarBadge)) {
   <!-- Lado izquierdo: logo + badge + breadcrumb -->
   <div class="gd-topbar-left">
     <a href="<?= $_tbBase ?>/" class="gd-topbar-brand">
-      <img src="<?= $_tbBase ?>/img/GastroDigitalLogo2.png" class="gd-topbar-logo" alt="GastroDigital">
-      <span class="gd-topbar-site-name">Gastro<strong>Digital</strong></span>
+      <img src="<?= $_tbBase ?>/img/logo-oficial-gastrodigital-optimized.png" class="gd-topbar-logo" alt="GastroDigital">
     </a>
     <?php if ($topbarBadge): ?>
     <span class="gd-topbar-badge"><?= htmlspecialchars($topbarBadge) ?></span>

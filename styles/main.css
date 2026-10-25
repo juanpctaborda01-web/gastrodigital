@@ -121,7 +121,6 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
 .sb.is-collapsed .sb-sep-line { margin: 0 12px; }
 .sb.is-collapsed .sb-head { justify-content: center; }
 .sb.is-collapsed .sb-brand { display: none; }
-.sb.is-collapsed .sb-hamburger { margin: 0 auto; }
 .sb.is-collapsed .sb-foot { padding: .6rem .5rem; }
 .sb.is-collapsed .sb-user-row { padding: .45rem; justify-content: center; }
 .sb.is-collapsed .sb-logout { justify-content: center; padding: .45rem; }
@@ -163,14 +162,18 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
 
 /* Hamburguesa */
 .sb-hamburger {
+  position: fixed;
+  top: 14px;
+  left: calc(var(--sb-w) - 50px);
+  z-index: 1001;
   display: flex; flex-direction: column; justify-content: center;
   gap: 4.5px; width: 34px; height: 34px;
   border-radius: 8px; border: none;
   background: rgba(255,255,255,.07);
   cursor: pointer; flex-shrink: 0; padding: 7px 8px;
   transition: background .18s, transform .15s;
-  order: 999; /* Va al final del head */
 }
+body.sb-is-collapsed .sb-hamburger { left: calc(var(--sb-w-collapsed) - 50px); }
 .sb-hamburger:hover { background: rgba(232,168,56,.18); }
 .sb-hamburger:active { transform: scale(.93); }
 
@@ -199,7 +202,7 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
   box-shadow: 0 3px 12px rgba(211,84,0,.4);
   transition: transform .2s;
 }
-.sb-logo-img { width: 100%; height: 100%; object-fit: cover; }
+.sb-logo-img { width: 100%; height: 100%; object-fit: cover; object-position: left center; }
 .sb-brand:hover .sb-logo-wrap { transform: scale(1.08) rotate(-5deg); }
 
 .sb-brand-texts { display: flex; flex-direction: column; min-width: 0; }
@@ -409,6 +412,24 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
   .sb.is-open  { transform: translateX(0); }
   .sb-backdrop { display: block; }
   body.sb-is-collapsed { padding-left: 0; }
+  .sb-hamburger {
+    top: calc(1rem + env(safe-area-inset-top, 0px));
+    left: 1rem;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2e1a0a, #9b2c1f);
+    box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    padding: 10px;
+  }
+  .sb.is-open + .sb-hamburger {
+    left: calc(var(--sb-w) - 54px);
+  }
+  .sb-hamburger:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 3px;
+  }
 }
 @media (min-width: 1024px) {
   .sb-backdrop { display: none !important; }
@@ -469,7 +490,7 @@ body.sb-is-collapsed { padding-left: var(--sb-w-collapsed); }
 
 .gd-topbar-left{display:flex;align-items:center;gap:.85rem}
 .gd-topbar-brand{display:flex;align-items:center;gap:.6rem;text-decoration:none}
-.gd-topbar-logo{height:28px;width:auto;object-fit:contain}
+.gd-topbar-logo{width:104px;height:60px;object-fit:contain}
 .gd-topbar-site-name{
   font-size:1rem;font-weight:400;color:var(--text);
 }
@@ -775,7 +796,7 @@ body.auth-page .gd-context-help { left: 1rem; }
    ═══════════════════════════════════════════════════════════════════════ */
 .hero-section{
   position:relative;
-  background-image:url('../img/GastorDigitalFondo.png');
+  background-image:url('../img/GastorDigitalFondo.jpg');
   background-size:cover;background-position:center;
   padding:5rem 0 5.5rem;overflow:hidden;
 }
@@ -823,6 +844,7 @@ body.auth-page .gd-context-help { left: 1rem; }
   background:radial-gradient(circle, rgba(232,168,56,.12) 0%, rgba(232,168,56,.04) 60%, transparent 100%);
   border:1px solid rgba(232,168,56,.18);
   top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
 }
 /* Segunda corona decorativa */
 .hero-circle-bg::after{
@@ -831,39 +853,47 @@ body.auth-page .gd-context-help { left: 1rem; }
 }
 .hero-float-card{
   position:absolute;
-  background:rgba(255,255,255,.11);
-  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-  border:1px solid rgba(255,255,255,.2);
+  background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(255,248,232,.94));
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.75);
   border-radius:20px;
-  padding:1.2rem 1.5rem 1.1rem;
-  color:#fff;
+  padding:1rem 1.15rem;
+  color:var(--dark);
   display:flex;flex-direction:column;gap:.3rem;
-  box-shadow:0 8px 32px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.14);
-  min-width:168px;max-width:210px;
+  box-shadow:0 18px 45px rgba(0,0,0,.28),0 3px 10px rgba(232,168,56,.12);
+  min-width:190px;max-width:220px;
   cursor:pointer;
-  transition:transform .3s ease, box-shadow .3s ease, background .3s ease;
+  transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
   text-decoration:none;
+  z-index:1;
 }
 .hero-float-card:hover{
-  background:rgba(255,255,255,.18);
-  box-shadow:0 14px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  border-color:rgba(244,171,46,.8);
+  box-shadow:0 22px 50px rgba(0,0,0,.34),0 0 0 4px rgba(244,171,46,.14);
   transform:translateY(-6px) scale(1.03) !important;
 }
-/* Icono PNG de categoría */
-.hero-card-icon-img{
-  width:36px;height:36px;object-fit:contain;
-  filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(5deg);
-  margin-bottom:.1rem;
+.hero-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.45rem}
+.hero-card-icon-wrap{
+  width:46px;height:46px;border-radius:14px;
+  background:linear-gradient(145deg,#fff3d6,#ffe3ad);
+  border:1px solid rgba(232,168,56,.2);
+  display:flex;align-items:center;justify-content:center;
 }
-/* Icono Bootstrap fallback */
-.hero-float-card > i { font-size:1.8rem; color:var(--gold); margin-bottom:.1rem; }
-/* Título de la receta */
-.hero-float-card span{font-weight:800;font-size:.92rem;line-height:1.25;color:#fff}
-/* Subtítulo tiempo + categoría */
+.hero-card-icon-img{
+  width:30px;height:30px;object-fit:contain;
+}
+.hero-card-fallback{font-size:1.25rem;color:var(--orange)}
+.hero-card-link-icon{font-size:1rem;color:var(--orange);transition:transform .2s ease}
+.hero-float-card:hover .hero-card-link-icon{transform:translate(2px,-2px)}
+.hero-float-card .hero-card-title{
+  font-weight:800;font-size:.98rem;line-height:1.3;color:var(--dark);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
 .hero-float-card small{
-  color:rgba(255,255,255,.58);font-size:.72rem;
+  color:var(--text-m);font-size:.73rem;font-weight:600;
   display:flex;align-items:center;gap:3px;margin-top:.1rem;
 }
+.hero-float-card small i{color:var(--orange)}
 /* Posiciones y animaciones */
 .hero-float-card.card-1{top:14px;left:4px;  animation:flt1 4s   ease-in-out infinite}
 .hero-float-card.card-2{top:110px;right:-4px;animation:flt2 4.8s ease-in-out infinite}
@@ -871,6 +901,9 @@ body.auth-page .gd-context-help { left: 1rem; }
 @keyframes flt1{0%,100%{transform:translateY(0)}    50%{transform:translateY(-14px)}}
 @keyframes flt2{0%,100%{transform:translateY(-5px)} 50%{transform:translateY(-19px)}}
 @keyframes flt3{0%,100%{transform:translateY(0)}    50%{transform:translateY(-11px)}}
+@media(prefers-reduced-motion:reduce){
+  .hero-float-card{animation:none!important;transition:none}
+}
 
 .hero-wave{position:absolute;bottom:-1px;left:0;right:0;line-height:0}
 .hero-wave svg{width:100%;height:75px;display:block}
@@ -932,9 +965,10 @@ body.auth-page .gd-context-help { left: 1rem; }
   object-fit:cover;border-radius:4px;
   box-shadow:0 1px 6px rgba(0,0,0,.25);
   display:inline-block;
+  position:absolute;top:11px;right:11px;z-index:4;
 }
 .receta-badge-icon{
-  position:absolute;top:11px;left:11px;z-index:2;
+  position:absolute;top:11px;left:11px;z-index:3;
   background:rgba(255,255,255,.93);backdrop-filter:blur(10px);
   display:flex;align-items:center;gap:.45rem;
   padding:.4rem .78rem;border-radius:28px;
@@ -943,6 +977,14 @@ body.auth-page .gd-context-help { left: 1rem; }
 .receta-badge-icon:hover{transform:scale(1.05)}
 .receta-categoria-icono{width:20px;height:20px;object-fit:contain}
 .receta-categoria-nombre{font-size:.7rem;font-weight:700;color:var(--dark)}
+.receta-detail-badges .receta-badge-icon{
+  position:static;
+  width:max-content;
+  max-width:none;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.receta-detail-badges .receta-categoria-nombre{white-space:nowrap}
 .badge-destacada{
   background:linear-gradient(135deg,var(--gold),#f5c518) !important;
   color:var(--dark) !important;font-weight:700;
@@ -993,7 +1035,7 @@ body.auth-page .gd-context-help { left: 1rem; }
 .como-num{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--gold),var(--orange));color:#fff;font-size:.66rem;font-weight:800;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .como-icon{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--cream-2),var(--cream-3));display:flex;align-items:center;justify-content:center;margin:0 auto .9rem;font-size:1.6rem;color:var(--orange)}
 
-.cta-section{position:relative;background-image:url('../img/GastorDigitalFondo.png');background-size:cover;background-position:center 60%;background-attachment:fixed;padding:5rem 0;text-align:center}
+.cta-section{position:relative;background-image:url('../img/GastorDigitalFondo.jpg');background-size:cover;background-position:center 60%;background-attachment:fixed;padding:5rem 0;text-align:center}
 .cta-section::before{content:'';position:absolute;inset:0;background:linear-gradient(155deg,rgba(22,10,3,.84),rgba(55,20,7,.74),rgba(14,5,2,.9))}
 .cta-section .container{position:relative;z-index:1}
 .cta-icon{font-size:3rem;color:var(--gold);display:block;margin-bottom:1rem}
@@ -1004,7 +1046,7 @@ body.auth-page .gd-context-help { left: 1rem; }
 .gd-footer::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(232,168,56,.05) 1px,transparent 1px);background-size:26px 26px;pointer-events:none}
 .gd-footer>.container{position:relative;z-index:1}
 .gd-footer-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;margin-bottom:.9rem}
-.gd-footer-logo{width:44px;height:44px;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.gd-footer-logo{width:150px;height:auto;object-fit:contain}
 .gd-footer-brand-name{font-size:1.2rem;font-weight:800;color:var(--cream)}
 .gd-footer-desc{color:rgba(255,255,255,.52);font-size:.86rem;line-height:1.65;margin-bottom:1.1rem}
 .gd-footer-social{display:flex;gap:.65rem}
@@ -1168,12 +1210,112 @@ body.auth-page .gd-context-help { left: 1rem; }
   .gd-topbar-breadcrumb{display:none}
   .gd-dash-hero-art{display:none}
   .gd-dash-hero-btns{flex-direction:row;flex-wrap:wrap}
+  .gd-topbar-logo{width:88px;height:50px}
 }
 @media(max-width:576px){
   .gd-role-selector{flex-direction:column}
   .hero-title{font-size:1.8rem}
   .gd-topbar-right .gd-topbar-user-info{display:none}
   .categorias-scroll{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:.5rem;-webkit-overflow-scrolling:touch}
+}
+
+@media (max-width: 767.98px) {
+  .gd-dash-hero {
+    margin-inline: .5rem;
+    padding: 1.4rem 1.1rem;
+  }
+  .gd-dash-hero-inner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .gd-dash-hero-body {
+    min-width: 0;
+    width: 100%;
+  }
+  .gd-dash-hero-title {
+    font-size: clamp(1.35rem, 6vw, 1.8rem);
+    overflow-wrap: anywhere;
+  }
+  .gd-dash-hero-desc {
+    font-size: .82rem;
+    margin-bottom: .9rem;
+  }
+  .gd-dash-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .65rem;
+  }
+  .gd-dash-hero-sep {
+    display: none;
+  }
+  .gd-dash-hero-stat {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .gd-dash-hero-btns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-left: 0;
+  }
+  .gd-hero-pill {
+    justify-content: center;
+    max-width: 100%;
+    white-space: normal;
+  }
+  .gd-stat-wrap {
+    padding-inline: .25rem;
+  }
+  .stat-card-colored {
+    min-height: 96px;
+    padding: 1rem;
+  }
+  .stat-card-colored .stat-number {
+    font-size: clamp(1.35rem, 6vw, 1.8rem);
+  }
+  .stat-card-colored .stat-label {
+    line-height: 1.25;
+  }
+  .gd-metric-card {
+    height: 100%;
+    min-width: 0;
+    padding: .9rem;
+  }
+  .gd-metric-card > div {
+    min-width: 0;
+  }
+  .gd-metric-label {
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .gd-metric-number {
+    font-size: 1.55rem;
+  }
+  .receta-card .card-body {
+    padding: 1rem;
+  }
+  .receta-card .card-footer {
+    padding-inline: 1rem;
+  }
+  .receta-card .card-footer .btn {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .gd-dash-hero-stats {
+    grid-template-columns: 1fr;
+  }
+  .gd-hero-pill {
+    flex: 1 1 calc(50% - .5rem);
+    padding-inline: .65rem;
+    font-size: .72rem;
+  }
+  .gd-stat-wrap .row {
+    --bs-gutter-x: .65rem;
+  }
 }
 
 
@@ -1898,6 +2040,15 @@ body.auth-page .gd-context-help { left: 1rem; }
   border-color: rgba(232,168,56,.35);
   color: #f5cc6e;
   margin-bottom: .55rem;
+}
+.gd-section-hero-tag-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: -4px;
+  margin-right: .45rem;
+  filter: drop-shadow(0 2px 6px rgba(255,255,255,.18));
 }
 
 /* Título principal */

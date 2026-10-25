@@ -68,10 +68,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Animación X en hamburguesa cuando está abierto (móvil)
     const observer = new MutationObserver(() => {
-        if (sidebar?.classList.contains('is-open')) {
+        const isOpen = sidebar?.classList.contains('is-open') ?? false;
+        if (isOpen) {
             btnToggle?.classList.add('is-open');
+            btnToggle?.setAttribute('aria-label', 'Cerrar menú');
+            btnToggle?.setAttribute('aria-expanded', 'true');
         } else {
             btnToggle?.classList.remove('is-open');
+            btnToggle?.setAttribute('aria-label', 'Abrir menú');
+            btnToggle?.setAttribute('aria-expanded', 'false');
         }
     });
     if (sidebar) observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
@@ -169,37 +174,57 @@ document.addEventListener('DOMContentLoaded', function () {
     // ════════════════════════════════════════════════════════════════════
     //  8. TOGGLE FAVORITOS (corazón animado)
     // ════════════════════════════════════════════════════════════════════
-    document.querySelectorAll('.btn-fav').forEach(btn => {
-        btn.addEventListener('click', async function () {
-            const id = this.dataset.id;
-            const csrf = document.querySelector('meta[name="csrf-token"]')?.content
-                       || window.CSRF_TOKEN || '';
-            if (!id) return;
+    document.addEventListener('click', async event => {
+        if (!(event.target instanceof Element)) return;
+        const btn = event.target.closest('.btn-fav');
+        if (!btn || btn.disabled) return;
 
-            this.disabled = true;
-            try {
-                const res  = await fetch(window.BASE_URL + '/favorito', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `receta_id=${id}&csrf_token=${encodeURIComponent(csrf)}`
-                });
-                const data = await res.json();
-                const icon = this.querySelector('i');
-                if (data.activo) {
-                    icon?.classList.replace('bi-heart', 'bi-heart-fill');
-                    this.classList.replace('btn-outline-danger', 'btn-danger');
-                } else {
-                    icon?.classList.replace('bi-heart-fill', 'bi-heart');
-                    this.classList.replace('btn-danger', 'btn-outline-danger');
-                    // Si estamos en /favoritos, eliminar la card
-                    document.getElementById('favorito-' + id)?.remove();
-                    if (!document.querySelector('[id^="favorito-"]')) location.reload();
-                }
-            } catch (_) {
-                alert('No se pudo actualizar. Intenta de nuevo.');
+        const id = btn.dataset.id;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        if (!id || !csrf) {
+            alert('No se pudo validar la sesión. Recarga la página e inténtalo de nuevo.');
+            return;
+        }
+
+        btn.disabled = true;
+        try {
+            const res = await fetch(window.BASE_URL + '/favorito', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ receta_id: id, csrf_token: csrf })
+            });
+            const data = await res.json();
+            if (!res.ok || typeof data.activo !== 'boolean') {
+                throw new Error(data.error || 'No se pudo actualizar el favorito.');
             }
-            this.disabled = false;
-        });
+
+            btn.classList.toggle('btn-danger', data.activo);
+            btn.classList.toggle('btn-outline-danger', !data.activo);
+            btn.setAttribute('aria-pressed', String(data.activo));
+            const icon = btn.querySelector('i');
+            icon?.classList.toggle('bi-heart-fill', data.activo);
+            icon?.classList.toggle('bi-heart', !data.activo);
+
+            const label = btn.querySelector('[data-fav-label]');
+            if (label) label.textContent = data.activo ? 'Guardada en favoritos' : 'Me gusta';
+            btn.title = data.activo ? 'Quitar de favoritos' : 'Guardar en favoritos';
+            btn.setAttribute('aria-label', btn.title);
+
+            const favoriteCard = document.getElementById('favorito-' + id);
+            if (!data.activo && favoriteCard) {
+                favoriteCard.style.transition = 'opacity .3s, transform .3s';
+                favoriteCard.style.opacity = '0';
+                favoriteCard.style.transform = 'scale(.95)';
+                setTimeout(() => {
+                    favoriteCard.remove();
+                    if (!document.querySelector('[id^="favorito-"]')) location.reload();
+                }, 300);
+            }
+        } catch (error) {
+            alert(error.message || 'No se pudo actualizar el favorito. Intenta de nuevo.');
+        } finally {
+            btn.disabled = false;
+        }
     });
 
     // ════════════════════════════════════════════════════════════════════

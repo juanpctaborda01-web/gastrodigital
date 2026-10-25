@@ -59,11 +59,6 @@ class AuthController {
         $_SESSION['usuario_avatar'] = $usuario['avatar'] ?? '';
         $_SESSION['rol']            = $usuario['rol'];
 
-        // Recordar sesión: guardar cookie si el usuario lo pidió
-        if (!empty($_POST['recordarme'])) {
-            guardarCookieRecordar($usuario);
-        }
-
         $this->redirigirPorRol($usuario['rol']);
     }
 
@@ -79,32 +74,58 @@ class AuthController {
         $email     = trim(filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL));
         $password  = $_POST['password']          ?? '';
         $confirmar = $_POST['confirmar_password'] ?? '';
+        $rol       = $_POST['rol']               ?? 'usuario';
+        $genero    = $_POST['genero']            ?? null;
+        $paisOrigen = $_POST['pais_origen']     ?? null;
 
         if (empty($nombre) || empty($email) || empty($password)) {
             $_SESSION['error'] = 'Por favor completa todos los campos.';
+            $_SESSION['registro_form'] = [
+                'nombre' => $nombre,
+                'email' => $email,
+                'rol' => $rol,
+                'genero' => $genero,
+                'pais_origen' => $paisOrigen,
+            ];
             redirect('register');
         }
 
         if (!validarEmail($email)) {
             $_SESSION['error'] = 'El correo electrónico no es válido.';
+            $_SESSION['registro_form'] = [
+                'nombre' => $nombre,
+                'email' => $email,
+                'rol' => $rol,
+                'genero' => $genero,
+                'pais_origen' => $paisOrigen,
+            ];
             redirect('register');
         }
 
         $erroresPass = validarPassword($password);
         if (!empty($erroresPass)) {
             $_SESSION['error'] = implode(' ', $erroresPass);
+            $_SESSION['registro_form'] = [
+                'nombre' => $nombre,
+                'email' => $email,
+                'rol' => $rol,
+                'genero' => $genero,
+                'pais_origen' => $paisOrigen,
+            ];
             redirect('register');
         }
 
         if ($password !== $confirmar) {
             $_SESSION['error'] = 'Las contraseñas no coinciden.';
+            $_SESSION['registro_form'] = [
+                'nombre' => $nombre,
+                'email' => $email,
+                'rol' => $rol,
+                'genero' => $genero,
+                'pais_origen' => $paisOrigen,
+            ];
             redirect('register');
         }
-
-        // Campos adicionales: género, país, rol
-        $rol        = $_POST['rol']         ?? 'usuario';
-        $genero     = $_POST['genero']      ?? null;
-        $paisOrigen = $_POST['pais_origen'] ?? null;
 
         $resultado = $this->model->registrar($nombre, $email, $password, $rol, $genero, $paisOrigen);
 
@@ -113,20 +134,7 @@ class AuthController {
             redirect('register');
         }
 
-        // Si pidió recordar sesión, iniciamos sesión automáticamente tras registro
-        if (!empty($_POST['recordarme'])) {
-            $usuario = $this->model->buscarPorEmail($email);
-            if ($usuario) {
-                regenerarSesion();
-                $_SESSION['usuario_id']     = $usuario['id'];
-                $_SESSION['usuario_nombre'] = $usuario['nombre'];
-                $_SESSION['usuario_email']  = $usuario['email'];
-                $_SESSION['rol']            = $usuario['rol'];
-                guardarCookieRecordar($usuario);
-                $this->redirigirPorRol($usuario['rol']);
-            }
-        }
-
+        unset($_SESSION['registro_form']);
         $_SESSION['exito'] = 'Cuenta creada. Ya puedes iniciar sesión.';
         redirect('login');
     }

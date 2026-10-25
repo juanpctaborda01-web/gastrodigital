@@ -27,11 +27,11 @@ $baseUrl = rtrim(BASE_URL, '/');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($pageTitle) ?> | GastroDigital</title>
     <meta name="description" content="Crea tu cuenta en GastroDigital y únete a la comunidad gastronómica.">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=2.3">
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/auth.css?v=3.0">
+    <link href="<?= $baseUrl ?>/assets/vendor/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/nunito/nunito.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=<?= filemtime(__DIR__ . '/../../styles/main.css') ?>">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/auth.css?v=<?= filemtime(__DIR__ . '/../../styles/auth.css') ?>">
 </head>
 <body class="auth-page">
 <?php include __DIR__ . '/../../assets/context_help.php'; ?>
@@ -43,8 +43,12 @@ $baseUrl = rtrim(BASE_URL, '/');
         <div class="gd-auth-deco gd-auth-deco-1"></div>
         <div class="gd-auth-deco gd-auth-deco-2"></div>
         <div class="gd-auth-side-content">
-            <img src="<?= $baseUrl ?>/img/logoGastroDigital.jpeg" alt="GastroDigital" class="gd-auth-side-logo">
-            <h2 class="gd-auth-side-title">GastroDigital</h2>
+            <img src="<?= $baseUrl ?>/img/logo-oficial-gastrodigital-optimized.png"
+                 alt="GastroDigital"
+                 class="gd-auth-side-logo"
+                 loading="eager"
+                 decoding="async"
+                 fetchpriority="high">
             <p class="gd-auth-side-sub">TU COCINA DIGITAL</p>
             <p class="gd-auth-side-desc">
                 Únete a miles de amantes de la cocina. Descubre, crea y comparte recetas increíbles.
@@ -244,14 +248,6 @@ $baseUrl = rtrim(BASE_URL, '/');
                     </label>
                 </div>
 
-                <div class="gd-auth-check">
-                    <input type="checkbox" id="recordarme" name="recordarme" value="1">
-                    <label for="recordarme">
-                        <i class="bi bi-bookmark-check me-1"></i>
-                        Mantener mi sesión iniciada por 30 días
-                    </label>
-                </div>
-
                 <button type="submit" class="gd-auth-submit" id="submitBtn" disabled>
                     <i class="bi bi-rocket-takeoff-fill"></i>
                     Crear mi cuenta
@@ -302,7 +298,7 @@ $baseUrl = rtrim(BASE_URL, '/');
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script defer src="<?= $baseUrl ?>/assets/vendor/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script>
 (function() {
     // Toggle contraseñas

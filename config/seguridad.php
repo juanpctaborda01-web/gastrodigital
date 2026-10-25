@@ -5,6 +5,10 @@
  */
 
 // ── 1. Configuración segura de sesión ────────────────────────────────────────
+if (extension_loaded('zlib') && ini_get('zlib.output_compression') === '') {
+    ini_set('zlib.output_compression', '1');
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly',  '1');   // JS no puede leer la cookie
     ini_set('session.cookie_samesite', 'Strict');
@@ -133,71 +137,13 @@ function enviarHeadersSeguridad(): void {
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-    // CSP: permite Bootstrap CDN, Google Fonts e íconos
+    // Todo el JavaScript, los estilos y las fuentes se sirven desde la aplicación.
     header("Content-Security-Policy: default-src 'self'; " .
-           "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " .
-           "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " .
-           "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; " .
+           "script-src 'self' 'unsafe-inline'; " .
+           "style-src 'self' 'unsafe-inline'; " .
+           "font-src 'self'; " .
            "img-src 'self' data: blob: http: https:; " .
            "connect-src 'self';");
 }
 
 enviarHeadersSeguridad();
-
-// ── 7. Cookie "Recordar sesión" ───────────────────────────────────────────────
-define('REMEMBER_COOKIE_NAME',   'gd_remember');
-define('REMEMBER_COOKIE_DIAS',   30);
-define('REMEMBER_COOKIE_SECRET', 'gd_s3cr3t_k3y_2024'); // clave HMAC interna
-
-/**
- * Guarda una cookie firmada con los datos mínimos del usuario.
- * NO guarda la contraseña — solo id, nombre, email y rol.
- */
-function guardarCookieRecordar(array $usuario): void {
-    $payload = base64_encode(json_encode([
-        'id'     => $usuario['id'],
-        'nombre' => $usuario['nombre'],
-        'email'  => $usuario['email'],
-        'rol'    => $usuario['rol'],
-        'exp'    => time() + (REMEMBER_COOKIE_DIAS * 86400),
-    ]));
-
-    $firma  = hash_hmac('sha256', $payload, REMEMBER_COOKIE_SECRET);
-    $valor  = $payload . '.' . $firma;
-
-    setcookie(
-        REMEMBER_COOKIE_NAME,
-        $valor,
-        time() + (REMEMBER_COOKIE_DIAS * 86400),
-        '/',
-        '',       // dominio vacío = dominio actual
-        false,    // secure: cambiar a true en producción con HTTPS
-        true      // httpOnly: JS no puede leerla
-    );
-}
-
-/**
- * Verifica y decodifica la cookie de sesión recordada.
- * Retorna los datos del usuario o null si la cookie es inválida/expirada.
- */
-function recordarSesionCookie(string $valor): ?array {
-    $partes = explode('.', $valor, 2);
-    if (count($partes) !== 2) return null;
-
-    [$payload, $firma] = $partes;
-
-    // Verificar firma
-    $firmaEsperada = hash_hmac('sha256', $payload, REMEMBER_COOKIE_SECRET);
-    if (!hash_equals($firmaEsperada, $firma)) return null;
-
-    $datos = json_decode(base64_decode($payload), true);
-    if (!$datos) return null;
-
-    // Verificar expiración
-    if (($datos['exp'] ?? 0) < time()) {
-        setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, '/', '', false, true);
-        return null;
-    }
-
-    return $datos;
-}

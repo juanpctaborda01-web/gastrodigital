@@ -40,20 +40,15 @@ $rc = $rolColors[$rol] ?? $rolColors['usuario'];
 <main class="pb-5">
 <div class="container">
 
-<!-- Hero unificado -->
-<div class="gd-section-hero mt-3 mb-4">
-    <div class="gd-section-hero-body">
-        <span class="section-tag"><i class="bi bi-person-circle me-1"></i>Mi cuenta</span>
-        <h1 class="gd-section-hero-title">Mi Perfil</h1>
-        <p class="gd-section-hero-sub">
-            <?= htmlspecialchars($nombre) ?> ·
-            <span style="text-transform:capitalize"><?= htmlspecialchars($rol) ?></span>
-        </p>
-    </div>
-    <div class="gd-section-hero-art d-none d-md-block">
-        <i class="bi bi-person-badge-fill" style="font-size:4rem;opacity:.28;color:#fff"></i>
-    </div>
-</div>
+<?php
+$phTag     = 'Mi cuenta';
+$phTagImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/profile.gif';
+$phTitle   = 'Mi Perfil';
+$phSub     = htmlspecialchars($nombre) . ' · <span style="text-transform:capitalize">'
+           . htmlspecialchars($rol) . '</span>';
+$phArtImg  = BASE_URL . '/img/Icon/ICON-Sobrantes/profile.gif';
+include __DIR__ . '/../../assets/page_header.php';
+?>
 
 <div class="row justify-content-center">
 <div class="col-lg-9">

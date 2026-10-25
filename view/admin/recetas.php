@@ -76,19 +76,14 @@ include __DIR__ . '/../../assets/topbar.php';
 </div>
 <?php endif; ?>
 
-<!-- ── Cabecera + stats rápidas ── -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 mb-3">
-    <div>
-        <h2 class="fw-800 mb-0" style="color:var(--text)">Recetas</h2>
-        <p class="text-muted mb-0 small">
-            <strong><?= $total ?></strong> receta<?= $total !== 1 ? 's' : '' ?> en total
-        </p>
-    </div>
-    <a href="<?= $baseUrl ?>/index.php?route=admin/recetas/nueva"
-       class="btn btn-primary d-flex align-items-center gap-2">
-        <i class="bi bi-plus-circle"></i> Nueva receta
-    </a>
-</div>
+<?php
+$phTag     = 'Catálogo';
+$phTagImg  = $baseUrl . '/img/Icon/Categorias/plato-principal.png';
+$phTitle   = 'Recetas';
+$phSub     = '<strong>' . (int)$total . '</strong> receta' . ($total !== 1 ? 's' : '') . ' en total';
+$phArtImg  = $baseUrl . '/img/Icon/ICON-Sobrantes/book_recipe.gif';
+include __DIR__ . '/../../assets/page_header.php';
+?>
 
 <!-- ── Panel de filtros ── -->
 <div class="card panel-card mb-4">

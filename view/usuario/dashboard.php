@@ -33,7 +33,7 @@ unset($_SESSION['exito'], $_SESSION['error']);
 
 $baseUrl = rtrim(BASE_URL, '/');
 $bodyClass = 'app-layout';
-$extraCss  = 'dashboard-usuario.css?v=3.1';
+$extraCss  = 'dashboard-usuario.css?v=' . filemtime(__DIR__ . '/../../styles/dashboard-usuario.css');
 ?>
 <?php include __DIR__ . '/../../assets/header.php'; ?>
 <?php include __DIR__ . '/../../assets/navbar.php'; ?>
@@ -69,7 +69,7 @@ include __DIR__ . '/../../assets/topbar.php';
       <div class="gd-dash-hero-inner">
         <div class="gd-dash-hero-body">
           <div class="gd-dash-chip">
-            <img src="<?= $baseUrl ?>/img/icon/Icon-Animados/saludo.gif" alt="" style="width:20px;height:20px">
+            <i class="bi bi-emoji-smile-fill" aria-hidden="true"></i>
             GastroDigital Community
           </div>
           <h1 class="gd-dash-hero-title">
@@ -80,7 +80,7 @@ include __DIR__ . '/../../assets/topbar.php';
                    style="width:48px;height:48px;object-fit:cover;vertical-align:middle">
             <?php endif; ?>
             Hola, <?= htmlspecialchars($perfilNombre) ?>
-            <img src="<?= $baseUrl ?>/img/icon/Icon-Animados/saludo.gif" alt="👋" style="width:42px;height:42px;vertical-align:middle">
+            <span aria-hidden="true">👋</span>
           </h1>
           <p class="gd-dash-hero-desc">¿Qué delicia vas a preparar hoy? Explora nuestras recetas gourmet, guarda tus favoritas y viaja por el mundo a través de su gastronomía.</p>
           <!-- Buscador -->
@@ -127,7 +127,7 @@ include __DIR__ . '/../../assets/topbar.php';
         <a href="<?= $baseUrl ?>/favoritos" class="gd-metric-card d-block text-decoration-none" style="border-top:3px solid var(--red)">
           <div class="d-flex align-items-center gap-3">
             <div class="gd-metric-icon-wrap" style="background:rgba(192,57,43,.1)">
-              <img src="<?= $baseUrl ?>/img/icon/Icon-Animados/heart.gif" alt="" style="width:28px;height:28px">
+              <i class="bi bi-heart-fill" aria-hidden="true" style="font-size:1.4rem;color:var(--red)"></i>
             </div>
             <div>
               <div class="gd-metric-label">Recetas Guardadas</div>
@@ -153,7 +153,7 @@ include __DIR__ . '/../../assets/topbar.php';
         <a href="<?= $baseUrl ?>/paises" class="gd-metric-card d-block text-decoration-none" style="border-top:3px solid #3498db">
           <div class="d-flex align-items-center gap-3">
             <div class="gd-metric-icon-wrap" style="background:rgba(52,152,219,.1)">
-              <img src="<?= $baseUrl ?>/img/icon/Icon-Animados/paises.gif" alt="" style="width:28px;height:28px">
+              <i class="bi bi-globe-americas" aria-hidden="true" style="font-size:1.4rem;color:#3498db"></i>
             </div>
             <div>
               <div class="gd-metric-label">Países Culinarios</div>
@@ -170,9 +170,6 @@ include __DIR__ . '/../../assets/topbar.php';
 
 <!-- ══ BOTONES FLOTANTES ══ -->
 <div class="gd-fab-container">
-    <button class="gd-fab gd-fab-info" type="button" title="Información" onclick="alert('¡Bienvenido a GastroDigital!\nExplora, guarda y descubre nuevas recetas cada día.')">
-        <i class="bi bi-exclamation-lg"></i>
-    </button>
     <button class="gd-fab gd-fab-chat" type="button" title="Chefbot" id="gdChatFab">
         <i class="bi bi-chat-dots-fill"></i>
     </button>

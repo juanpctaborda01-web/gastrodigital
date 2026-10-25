@@ -1,0 +1,98 @@
+.dashboard-shell {
+    --primary-dark: #9b2c1f;
+    --secondary-dark: #9a5a00;
+    --danger: #c0392b;
+}
+
+.dashboard-shell .card {
+    background-color: #fff;
+    color: #33261e;
+    border-color: #e7e1dc;
+}
+
+.dashboard-shell .card .card-body :is(h1, h2, h3, h4, h5, h6, p, small, td, th, label, .fw-600, .fw-700, .fw-800) {
+    color: #33261e !important;
+}
+
+.dashboard-shell .card .text-muted {
+    color: #667085 !important;
+}
+
+.dashboard-shell .stat-card-colored .stat-label {
+    opacity: 1;
+}
+
+[data-theme="dark"] .dashboard-shell .card,
+.dark .dashboard-shell .card {
+    background-color: #1e1408;
+    color: #e0d0bc;
+    border-color: rgba(232, 168, 56, .16);
+}
+
+[data-theme="dark"] .dashboard-shell .card .card-body :is(h1, h2, h3, h4, h5, h6, p, small, td, th, label, .fw-600, .fw-700, .fw-800),
+.dark .dashboard-shell .card .card-body :is(h1, h2, h3, h4, h5, h6, p, small, td, th, label, .fw-600, .fw-700, .fw-800) {
+    color: #e0d0bc !important;
+}
+
+[data-theme="dark"] .dashboard-shell .card .text-muted,
+.dark .dashboard-shell .card .text-muted {
+    color: #b6a58e !important;
+}
+
+.admin-chart-rows,
+.admin-category-chart {
+    display: grid;
+    gap: 1rem;
+}
+
+.admin-category-chart {
+    gap: .8rem;
+}
+
+.admin-chart-row {
+    min-width: 0;
+}
+
+.admin-chart-row-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: .35rem;
+    font-size: .875rem;
+}
+
+.admin-chart-row-heading span {
+    min-width: 0;
+}
+
+.admin-chart-row-heading strong {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-chart-track {
+    height: .65rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf0f2;
+}
+
+.admin-chart-track > span {
+    display: block;
+    height: 100%;
+    min-width: 0;
+    border-radius: inherit;
+}
+
+.dashboard-shell .stat-card-colored .stat-icon-image {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .18));
+}
+
+[data-theme="dark"] .admin-chart-track,
+.dark .admin-chart-track {
+    background: #392b1e;
+}

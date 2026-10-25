@@ -6,24 +6,25 @@
 /* ── Botón flotante ── */
 .chatbot-toggle {
     position: fixed;
-    bottom: 88px;   /* más alto para no tapar navegación inferior en móvil */
+    bottom: 88px;
     right: 22px;
     width: 56px;
     height: 56px;
+    border: 0;
     border-radius: 50%;
     background: linear-gradient(135deg, #3b2a1a 0%, #e56a26 60%, #f4ab2e 100%);
-    border: none;
     color: #fff;
     cursor: pointer;
     box-shadow: 0 6px 24px rgba(229,106,38,.5), 0 0 0 0 rgba(229,106,38,.35);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9990;   /* por debajo de sidebar (z:1000) pero encima de contenido */
+    z-index: 1050;
     padding: 0;
     overflow: hidden;
-    transition: transform .28s cubic-bezier(.34,1.56,.64,1),
-                box-shadow .25s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;
     animation: chatbot-pop-in .5s cubic-bezier(.34,1.56,.64,1) .8s both;
 }
 
@@ -39,11 +40,10 @@
     }
 }
 
-/* Imagen PNG del icono de Chefbot — id real es chatbotIconImg */
-.chatbot-toggle img#chatbotIconImg,
-.chatbot-toggle img#chatbotIcon {
-    width: 38px;
-    height: 38px;
+/* Imagen PNG del icono de Chefbot */
+.chatbot-toggle #chatbotIconImg {
+    width: 32px;
+    height: 32px;
     object-fit: contain;
     display: block;
     filter: brightness(0) invert(1);
@@ -52,12 +52,15 @@
 }
 
 /* Ícono X al abrir */
-.chatbot-toggle i#chatbotIconX,
-.chatbot-toggle i#chatbotIcon {
-    font-size: 1.4rem;
+.chatbot-toggle #chatbotIconX {
+    width: 20px;
+    height: 20px;
+    display: none;
+    font-size: 1.35rem;
     line-height: 1;
-    display: block;
     flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
 }
 
 .chatbot-toggle:hover {
@@ -65,14 +68,21 @@
     box-shadow: 0 10px 32px rgba(229,106,38,.6);
 }
 
-.chatbot-toggle:hover img#chatbotIconImg,
-.chatbot-toggle:hover img#chatbotIcon {
+.chatbot-toggle:hover #chatbotIconImg {
     transform: scale(1.08) rotate(-5deg);
 }
 
 /* Estado activo (chat abierto) */
 .chatbot-toggle.active {
     background: linear-gradient(135deg, #c85516, #e56a26);
+}
+
+.chatbot-toggle.active #chatbotIconImg {
+    display: none;
+}
+
+.chatbot-toggle.active #chatbotIconX {
+    display: inline-flex;
 }
 
 /* Pulso de atención cuando hay mensajes nuevos */
@@ -110,19 +120,20 @@
     box-shadow: 0 12px 48px rgba(60,30,10,.18);
     display: flex;
     flex-direction: column;
-    z-index: 9998;
+    z-index: 1040;
     overflow: hidden;
-    /* Oculto por defecto — animación de entrada */
     opacity: 0;
     transform: translateY(20px) scale(.95);
     pointer-events: none;
-    transition: opacity .3s ease, transform .3s ease;
+    visibility: hidden;
+    transition: opacity .3s ease, transform .3s ease, visibility .3s ease;
 }
 
 .chatbot-window.open {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: all;
+    visibility: visible;
 }
 
 /* ── Header del chat ── */
@@ -515,4 +526,96 @@
 
 .chatbot-toggle {
     animation: chatbot-pop-in .5s cubic-bezier(.34,1.56,.64,1) .8s both;
+}
+
+/* ── Chefbot refinado ── */
+.chatbot-window {
+    width: min(410px, calc(100vw - 32px));
+    max-height: min(640px, calc(100vh - 120px));
+    border: 1px solid rgba(112, 73, 43, .12);
+    box-shadow: 0 22px 70px rgba(48, 29, 14, .24);
+}
+
+.chatbot-header {
+    background:
+        radial-gradient(circle at 88% 0, rgba(244, 171, 46, .3), transparent 34%),
+        linear-gradient(130deg, #392414, #6b351c 70%, #994719);
+    padding: .9rem 1rem;
+}
+
+.chatbot-avatar {
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255, 255, 255, .35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+}
+
+.chatbot-name { font-size: 1rem; letter-spacing: .01em; }
+.chatbot-tagline {
+    margin-top: 2px;
+    color: rgba(255, 255, 255, .62);
+    font-size: .67rem;
+    letter-spacing: .03em;
+}
+
+.chatbot-messages {
+    background:
+        radial-gradient(ellipse at top left, rgba(244, 171, 46, .1), transparent 52%),
+        #fbf7f1;
+    padding: 1rem 1rem 1.2rem;
+}
+
+.chat-msg.bot { max-width: 96%; }
+.chat-msg.user { max-width: 88%; }
+
+.chat-bubble {
+    padding: .72rem .9rem;
+    font-size: .86rem;
+    line-height: 1.55;
+}
+
+.chat-msg.bot .chat-bubble {
+    border: 1px solid rgba(107, 53, 28, .08);
+    box-shadow: 0 4px 14px rgba(60, 30, 10, .06);
+}
+
+.chatbot-suggestions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: .65rem .8rem;
+    scrollbar-width: thin;
+    scrollbar-color: #e8d9c8 transparent;
+}
+
+.chatbot-suggestions::-webkit-scrollbar { height: 4px; }
+.chatbot-suggestions::-webkit-scrollbar-thumb { background: #e8d9c8; border-radius: 4px; }
+
+.suggestion-chip {
+    border-width: 1px;
+    padding: .38rem .72rem;
+    font-size: .72rem;
+}
+
+.chatbot-input-area {
+    padding: .7rem .85rem .55rem;
+    box-shadow: 0 -4px 14px rgba(60, 30, 10, .035);
+}
+
+.chatbot-input-wrap { border-radius: 16px; }
+
+@media (max-width: 480px) {
+    .chatbot-window {
+        width: calc(100vw - 20px);
+        right: 10px;
+        max-height: 70dvh;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chatbot-toggle,
+    .chat-msg,
+    .chatbot-dot,
+    .chat-bubble.typing span {
+        animation: none;
+    }
 }

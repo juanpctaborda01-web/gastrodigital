@@ -57,6 +57,7 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
                     <span class="chatbot-dot" aria-hidden="true"></span>
                     <span id="chatbotStatusText">En línea</span>
                 </div>
+                <div class="chatbot-tagline">Tu asistente de cocina</div>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -79,12 +80,7 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
         <!-- Mensaje de bienvenida -->
         <div class="chat-msg bot" data-time="<?= $horaActual ?>">
             <div class="chat-bubble">
-                👨‍🍳 ¡Hola! Soy <strong>Chefbot</strong>, el asistente gastronómico de <strong>GastroDigital</strong>.<br><br>
-                Puedo ayudarte con:<br>
-                🍽️ <strong>Recetas oficiales</strong> del catálogo<br>
-                🥕 Ingredientes y pasos de preparación<br>
-                💡 Consejos y preguntas generales de cocina<br><br>
-                Escribe <em>"ayuda"</em> para ver más opciones.
+                👨‍🍳 ¡Hola! Soy <strong>Chefbot</strong>. Busco recetas oficiales con sus ingredientes y pasos, y también resuelvo dudas de cocina.
             </div>
             <div class="chat-time"><?= $horaActual ?></div>
         </div>
@@ -92,9 +88,8 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
 
     <!-- ── Sugerencias rápidas ── -->
     <div class="chatbot-suggestions" id="chatbotSuggestions" aria-label="Sugerencias rápidas">
-        <button class="suggestion-chip" data-msg="¿Quién eres?">🤖 ¿Quién eres?</button>
         <button class="suggestion-chip" data-msg="Dame una receta oficial de GastroDigital">🍽️ Receta oficial</button>
-        <button class="suggestion-chip" data-msg="Recetas rápidas de menos de 30 minutos">⏱️ Recetas rápidas</button>
+        <button class="suggestion-chip" data-msg="Recetas rápidas de menos de 30 minutos">⏱️ Menos de 30 min</button>
         <button class="suggestion-chip" data-msg="Recetas fáciles para principiantes">🟢 Recetas fáciles</button>
         <button class="suggestion-chip" data-msg="¿Qué categorías de recetas hay?">🏷️ Categorías</button>
     </div>
@@ -154,6 +149,7 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
 
     let isOpen       = false;
     let isLoading    = false;
+    let historialCargado = false;
     let pendingBadge = 0;
 
     // ── Abrir / cerrar ────────────────────────────────────────
@@ -166,6 +162,7 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
         if (iconX)   iconX.style.display   = 'block';
         badge.style.display = 'none';
         pendingBadge = 0;
+        if (!historialCargado) cargarHistorial();
         setTimeout(() => input.focus(), 300);
     }
 
@@ -301,6 +298,7 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
                 agregarMensaje(turno.mensaje, 'user');
                 agregarMensaje(turno.respuesta, 'bot');
             });
+            historialCargado = true;
         })
         .catch(err => {
             console.error('[Chefbot] No se pudo cargar el historial:', err);
@@ -324,7 +322,12 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
         if (rol === 'bot' && tipo && tipo !== 'general' && tipo !== 'error') {
             const badge = document.createElement('span');
             badge.className = 'chat-tipo-badge chat-tipo-' + tipo;
-            badge.textContent = tipo === 'oficial' ? '✅ Receta oficial' : tipo;
+            const etiquetas = {
+                oficial: 'Receta oficial',
+                catalogo: 'Del catálogo',
+                no_encontrada: 'Sin coincidencias'
+            };
+            badge.textContent = etiquetas[tipo] || tipo;
             bubble.appendChild(badge);
             bubble.appendChild(document.createElement('br'));
         }
@@ -421,8 +424,6 @@ $chatStorageKey = 'gastrodigital_chat_' . (isset($_SESSION['usuario_id']) ? (int
                 byte => byte.toString(16).padStart(2, '0')).join('');
         }
     }
-
-    cargarHistorial();
 
 })();
 </script>

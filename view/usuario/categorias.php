@@ -15,22 +15,15 @@ $icoBase    = $baseUrl . '/img/Icon/Categorias/';
 <main class="pb-5">
 <div class="container">
 
-    <!-- HERO SECCIÓN -->
-    <div class="gd-section-hero mb-4">
-        <div class="gd-section-hero-body">
-            <span class="section-tag">
-                <i class="bi bi-grid-3x3-gap me-1"></i>Catálogo
-            </span>
-            <h1 class="gd-section-hero-title">Categorías Gastronómicas</h1>
-            <p class="gd-section-hero-sub">
-                <?= count($categorias) ?> categoría<?= count($categorias) != 1 ? 's' : '' ?> ·
-                Descubre recetas por tipo de plato, ocasión o ingrediente
-            </p>
-        </div>
-        <div class="gd-section-hero-art d-none d-md-block">
-            <img src="<?= $icoBase ?>plato-principal.png" alt="">
-        </div>
-    </div>
+    <?php
+    $phTag     = 'Catálogo';
+    $phTagImg  = $icoBase . 'arroz.png';
+    $phTitle   = 'Categorías Gastronómicas';
+    $phSub     = count($categorias) . ' categoría' . (count($categorias) !== 1 ? 's' : '') . ' · '
+               . 'Descubre recetas por tipo de plato, ocasión o ingrediente';
+    $phArtImg  = $icoBase . 'plato-principal.png';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <?php if (empty($categorias)): ?>
     <div class="empty-state">

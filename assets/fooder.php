@@ -9,8 +9,11 @@ $anio    = date('Y');
             <!-- Marca -->
             <div class="col-lg-4 col-md-6">
                 <a href="<?= $baseUrl ?>" class="gd-footer-brand">
-                    <img src="<?= $baseUrl ?>/img/GastroDigitalLogo2.png" alt="GastroDigital" class="gd-footer-logo">
-                    <span class="gd-footer-brand-name">GastroDigital</span>
+                    <img src="<?= $baseUrl ?>/img/logo-oficial-gastrodigital-optimized.png"
+                         alt="GastroDigital"
+                         class="gd-footer-logo"
+                         loading="lazy"
+                         decoding="async">
                 </a>
                 <p class="gd-footer-desc">
                     Descubre, crea y comparte recetas increíbles con una comunidad apasionada por la cocina.
@@ -93,8 +96,8 @@ $anio    = date('Y');
 </footer>
 
 <!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= $baseUrl ?>/js/app.js?v=5.0"></script>
+<script defer src="<?= $baseUrl ?>/assets/vendor/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script defer src="<?= $baseUrl ?>/js/app.js?v=<?= filemtime(__DIR__ . '/../js/app.js') ?>"></script>
 <?php include __DIR__ . '/chatbot.php'; ?>
 </body>
 </html>

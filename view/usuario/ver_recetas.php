@@ -37,9 +37,9 @@ $chefAvatarUrl = $receta ? urlAvatarPerfil($receta['chef_avatar'] ?? null) : nul
 
 $favoritosIds = [];
 if (isLoggedIn()) {
-    foreach ($model->favoritosDeUsuario($_SESSION['usuario_id']) as $f) {
-        $favoritosIds[] = $f['id'];
-    }
+    $recetaIdsVisibles = array_column($recetas, 'id');
+    if ($receta) $recetaIdsVisibles[] = $receta['id'];
+    $favoritosIds = $model->favoritosIds((int)$_SESSION['usuario_id'], $recetaIdsVisibles);
 }
 ?>
 <?php include __DIR__ . '/../../assets/header.php'; ?>
@@ -103,7 +103,7 @@ if (isLoggedIn()) {
                 </div>
 
                 <!-- Badge categoría + bandera abajo-izquierda -->
-                <div class="position-absolute bottom-0 start-0 p-2 d-flex align-items-center gap-2">
+                <div class="position-absolute bottom-0 start-0 p-2 d-flex align-items-center gap-2 receta-detail-badges">
                     <span class="receta-badge-icon">
                         <img src="<?= BASE_URL ?>/img/Icon/Categorias/<?= htmlspecialchars($catIconoD) ?>"
                              alt="" class="receta-categoria-icono"
@@ -242,23 +242,30 @@ if (isLoggedIn()) {
                     <!-- Acciones -->
                     <div class="d-flex flex-wrap gap-2">
                         <?php if (isLoggedIn()): ?>
-                        <?php $detalleEsFavorito = $model->esFavorito((int)$_SESSION['usuario_id'], (int)$receta['id']); ?>
+                        <?php $detalleEsFavorito = in_array((int)$receta['id'], $favoritosIds, true); ?>
                         <button type="button"
                                 class="btn btn-sm <?= $detalleEsFavorito ? 'btn-danger' : 'btn-outline-danger' ?> btn-fav"
                                 data-id="<?= (int)$receta['id'] ?>"
                                 aria-pressed="<?= $detalleEsFavorito ? 'true' : 'false' ?>">
-                            <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/heart.gif"
-                                 style="width:16px;height:16px;object-fit:contain;margin-right:4px"
-                                 onerror="this.style.display='none'">
-                            <span><?= $detalleEsFavorito ? 'Guardada en favoritos' : 'Me gusta' ?></span>
+                            <i class="bi bi-heart-fill me-1" aria-hidden="true"></i>
+                            <span data-fav-label><?= $detalleEsFavorito ? 'Guardada en favoritos' : 'Me gusta' ?></span>
                         </button>
                         <?php else: ?>
                         <a href="<?= BASE_URL ?>/index.php?route=login"
                            class="btn btn-outline-danger btn-sm">
-                            <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/heart.gif"
-                                 style="width:16px;height:16px;object-fit:contain;margin-right:4px"
-                                 onerror="this.style.display='none'">
+                            <i class="bi bi-heart-fill me-1" aria-hidden="true"></i>
                             Iniciar sesión para guardar
+                        </a>
+                        <?php endif; ?>
+                        <?php if (isLoggedIn()): ?>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal" data-bs-target="#modalReporteContenido"
+                                data-tipo="receta" data-objetivo-id="<?= (int)$receta['id'] ?>">
+                            <i class="bi bi-flag me-1"></i>Reportar receta
+                        </button>
+                        <?php else: ?>
+                        <a href="<?= BASE_URL ?>/index.php?route=login" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-flag me-1"></i>Reportar receta
                         </a>
                         <?php endif; ?>
                         <?php if (!empty($receta['video_url'])): ?>
@@ -266,6 +273,15 @@ if (isLoggedIn()) {
                            target="_blank" rel="noopener"
                            class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-play-circle me-1"></i>Ver video
+                        </a>
+                        <?php endif; ?>
+                        <?php if (!empty($receta['pasos'])): ?>
+                        <a href="<?= BASE_URL ?>/index.php?route=cocinar&id=<?= (int)$receta['id'] ?>"
+                           class="btn btn-sm fw-700"
+                           style="background:linear-gradient(135deg,var(--primary),#b84700);color:#fff;border:none;box-shadow:0 4px 14px rgba(211,84,0,.28);gap:.35rem"
+                           aria-label="Comenzar a cocinar <?= htmlspecialchars($receta['titulo']) ?>">
+                            <i class="bi bi-fire me-1" aria-hidden="true"></i>
+                            Comenzar a cocinar
                         </a>
                         <?php endif; ?>
                     </div>
@@ -378,9 +394,7 @@ if (isLoggedIn()) {
             <div class="card panel-card h-100">
                 <div class="card-header py-3 d-flex align-items-center gap-2"
                      style="background:var(--surface-3);border-bottom:1px solid var(--border)">
-                    <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/stars.gif"
-                         alt="" style="width:20px;height:20px;object-fit:contain"
-                         onerror="this.style.display='none'">
+                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                     <h5 class="mb-0 fw-800">Valora esta receta</h5>
                 </div>
                 <div class="card-body">
@@ -389,7 +403,7 @@ if (isLoggedIn()) {
                         <input type="hidden" name="receta_id" value="<?= (int)$receta['id'] ?>">
                         <div>
                             <label class="form-label small fw-600 mb-2">Tu puntuación</label>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2 val-star-group">
                                 <?php for ($i = 1; $i <= 5; $i++): ?>
                                 <label style="cursor:pointer;margin:0">
                                     <input type="radio" name="puntuacion" value="<?= $i ?>"
@@ -404,17 +418,14 @@ if (isLoggedIn()) {
                         <textarea name="comentario" class="form-control form-control-sm" rows="3"
                                   placeholder="Tu comentario (opcional)"></textarea>
                         <button class="btn btn-primary btn-sm fw-700" type="submit">
-                            <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/stars.gif"
-                                 style="width:15px;height:15px;object-fit:contain;margin-right:4px"
-                                 onerror="this.style.display='none'">
+                            <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
                             Enviar valoración
                         </button>
                     </form>
                     <?php else: ?>
                     <div class="text-center py-3">
-                        <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/stars.gif"
-                             style="width:48px;opacity:.3;display:block;margin:0 auto .75rem"
-                             onerror="this.style.display='none'">
+                        <i class="bi bi-star-fill text-warning" aria-hidden="true"
+                           style="font-size:3rem;opacity:.3;display:block;margin:0 auto .75rem"></i>
                         <p class="text-muted small mb-3">Inicia sesión para valorar esta receta.</p>
                         <a href="<?= BASE_URL ?>/index.php?route=login" class="btn btn-primary btn-sm">
                             Iniciar sesión
@@ -462,9 +473,7 @@ if (isLoggedIn()) {
                     <?php if (isLoggedIn()): ?>
                     <button type="button" class="btn btn-outline-secondary btn-sm w-100"
                             data-bs-toggle="modal" data-bs-target="#modalValorarChef">
-                        <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/stars.gif"
-                             style="width:15px;height:15px;object-fit:contain;margin-right:4px"
-                             onerror="this.style.display='none'">
+                        <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
                         Valorar chef
                     </button>
                     <?php endif; ?>
@@ -517,6 +526,16 @@ if (isLoggedIn()) {
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <span class="fw-700 small"><?= htmlspecialchars($c['autor'] ?? 'Usuario') ?></span>
                             <small class="text-muted"><?= date('d/m/Y · H:i', strtotime($c['created_at'])) ?></small>
+                            <?php if (isLoggedIn() && (int)$_SESSION['usuario_id'] !== (int)$c['id_usuario']): ?>
+                            <button type="button" class="btn btn-link btn-sm text-muted ms-auto p-0"
+                                    data-bs-toggle="modal" data-bs-target="#modalReporteContenido"
+                                    data-tipo="comentario"
+                                    data-objetivo-id="<?= (int)$c['id_comentario'] ?>"
+                                    aria-label="Reportar comentario de <?= htmlspecialchars($c['autor'] ?? 'usuario') ?>"
+                                    title="Reportar comentario">
+                                <i class="bi bi-flag"></i>
+                            </button>
+                            <?php endif; ?>
                         </div>
                         <p class="mb-0 small" style="color:var(--text);line-height:1.6">
                             <?= htmlspecialchars($c['contenido']) ?>
@@ -558,26 +577,14 @@ if (isLoggedIn()) {
 <?php else: ?>
     <!-- ══ CATÁLOGO CON FILTROS ══════════════════════════════════════════════ -->
 
-    <!-- Hero unificado -->
-    <div class="gd-section-hero mb-4">
-        <div class="gd-section-hero-body">
-            <span class="section-tag">
-                <img src="<?= BASE_URL ?>/img/Icon/Categorias/plato-principal.png"
-                     style="width:14px;height:14px;object-fit:contain;margin-right:4px"
-                     onerror="this.style.display='none'">
-                Catálogo
-            </span>
-            <h1 class="gd-section-hero-title">
-                <?= $esChef ? 'Recetas de otros chefs' : 'Explorar Recetas' ?>
-            </h1>
-            <p class="gd-section-hero-sub">
-                <?= $total ?> receta<?= $total !== 1 ? 's' : '' ?> encontrada<?= $total !== 1 ? 's' : '' ?>
-            </p>
-        </div>
-        <div class="gd-section-hero-art d-none d-md-block">
-            <img src="<?= BASE_URL ?>/img/Icon/Categorias/plato-principal.png" alt="">
-        </div>
-    </div>
+    <?php
+    $phTag     = 'Catálogo';
+    $phTagImg  = BASE_URL . '/img/Icon/Categorias/plato-principal.png';
+    $phTitle   = $esChef ? 'Recetas de otros chefs' : 'Explorar Recetas';
+    $phSub     = $total . ' receta' . ($total !== 1 ? 's' : '') . ' encontrada' . ($total !== 1 ? 's' : '');
+    $phArtImg  = BASE_URL . '/img/Icon/Categorias/plato-principal.png';
+    include __DIR__ . '/../../assets/page_header.php';
+    ?>
 
     <!-- Filtros -->
     <div class="gd-filtros-panel mb-4">
@@ -609,8 +616,7 @@ if (isLoggedIn()) {
                 </div>
                 <div class="col-md-3">
                     <label class="gd-filtro-label">
-                        <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/paises.gif"
-                             style="width:14px;height:14px;margin-right:4px" onerror="this.style.display='none'">
+                        <i class="bi bi-globe-americas me-1" aria-hidden="true"></i>
                         País de origen
                     </label>
                     <select class="gd-filtro-select" name="pais">
@@ -682,7 +688,7 @@ if (isLoggedIn()) {
             $catNombre = !empty($r['categoria']) ? $r['categoria'] : 'Otros';
             $color     = getCategoriaColor($catNombre);
             $catIcono  = getCategoriaIcono($catNombre);
-            $esFav     = in_array($r['id'], $favoritosIds);
+            $esFav     = in_array((int)$r['id'], $favoritosIds, true);
             $isoFlag   = strtolower($r['pais_iso'] ?? '');
             $rootPath  = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2);
             $imgField  = trim($r['imagen'] ?? '');
@@ -722,14 +728,11 @@ if (isLoggedIn()) {
 
                 <!-- Bandera -->
                 <?php if ($isoFlag): ?>
-                <div class="position-absolute"
-                     style="<?= !empty($r['destacada']) ? 'top:42px' : 'top:10px' ?>;right:10px;z-index:2">
-                    <img src="<?= BASE_URL ?>/img/icon/flags/4x3/<?= $isoFlag ?>.svg"
-                         alt="País"
-                         style="width:30px;height:22px;object-fit:cover;border-radius:5px;
-                                border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.3)"
-                         onerror="this.parentNode.style.display='none'">
-                </div>
+                <img src="<?= BASE_URL ?>/img/icon/flags/4x3/<?= $isoFlag ?>.svg"
+                     alt="País"
+                     class="receta-flag-badge position-absolute"
+                     style="<?= !empty($r['destacada']) ? 'top:42px;' : 'top:11px;' ?> right:11px;"
+                     onerror="this.style.display='none'">
                 <?php endif; ?>
 
                 <div class="card-body">
@@ -766,11 +769,17 @@ if (isLoggedIn()) {
                     <button class="btn btn-sm <?= $esFav ? 'btn-danger' : 'btn-outline-danger' ?> btn-fav"
                             data-id="<?= $r['id'] ?>"
                             title="<?= $esFav ? 'Quitar de favoritos' : 'Guardar en favoritos' ?>"
+                            aria-label="<?= $esFav ? 'Quitar de favoritos' : 'Guardar en favoritos' ?>"
                             aria-pressed="<?= $esFav ? 'true' : 'false' ?>">
-                        <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/heart.gif"
-                             style="width:16px;height:16px;object-fit:contain"
-                             onerror="this.replaceWith(document.createElement('i')).className='bi bi-heart'">
+                        <i class="bi bi-heart<?= $esFav ? '-fill' : '' ?>" aria-hidden="true"></i>
                     </button>
+                    <?php else: ?>
+                    <a href="<?= BASE_URL ?>/index.php?route=login"
+                       class="btn btn-sm btn-outline-danger"
+                       title="Inicia sesión para guardar en favoritos"
+                       aria-label="Inicia sesión para guardar en favoritos">
+                        <i class="bi bi-heart" aria-hidden="true"></i>
+                    </a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -815,9 +824,7 @@ if (isLoggedIn()) {
     <div class="modal-content border-0 shadow-lg" style="border-radius:16px">
       <div class="modal-header border-0 pb-0">
         <h5 class="modal-title fw-800">
-            <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/stars.gif"
-                 style="width:20px;height:20px;object-fit:contain;margin-right:6px"
-                 onerror="this.style.display='none'">
+            <i class="bi bi-star-fill text-warning me-2" aria-hidden="true"></i>
             Valorar chef
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -827,7 +834,7 @@ if (isLoggedIn()) {
           <input type="hidden" name="chef_id" value="<?= $receta ? (int)$receta['chef_id'] : 0 ?>">
           <div class="mb-3">
             <label class="form-label fw-600 small">Puntuación</label>
-            <div class="d-flex gap-2 align-items-center">
+            <div class="d-flex gap-2 align-items-center val-star-group">
               <?php for ($i = 1; $i <= 5; $i++): ?>
               <label class="form-check-label d-flex align-items-center" style="cursor:pointer">
                 <input type="radio" name="puntuacion" value="<?= $i ?>"
@@ -846,9 +853,7 @@ if (isLoggedIn()) {
           </div>
           <div class="d-grid">
             <button class="btn btn-primary fw-700" type="submit">
-                <img src="<?= BASE_URL ?>/img/Icon/Icon-Animados/stars.gif"
-                     style="width:15px;height:15px;object-fit:contain;margin-right:4px"
-                     onerror="this.style.display='none'">
+                <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
                 Guardar valoración
             </button>
           </div>
@@ -858,20 +863,20 @@ if (isLoggedIn()) {
   </div>
 </div>
 
-<!-- Modal reporte comentario -->
-<div class="modal fade" id="modalReporteComentario" tabindex="-1" aria-hidden="true">
+<!-- Modal para reportar recetas y comentarios -->
+<div class="modal fade" id="modalReporteContenido" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg" style="border-radius:16px">
       <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-800">
-            <i class="bi bi-flag text-warning me-2"></i>Reportar comentario
+        <h5 class="modal-title fw-800" id="tituloModalReporte">
+            <i class="bi bi-flag text-warning me-2"></i><span id="textoTituloReporte">Reportar receta</span>
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="formReporteComentario">
-          <input type="hidden" name="tipo" value="comentario">
-          <input type="hidden" name="objetivo_id" id="reporteComentarioId" value="0">
+        <form id="formReporteContenido">
+          <input type="hidden" name="tipo" id="reporteTipo" value="receta">
+          <input type="hidden" name="objetivo_id" id="reporteObjetivoId" value="0">
           <div class="mb-3">
             <label class="form-label fw-600 small">Motivo</label>
             <select class="form-select" name="motivo" required>
@@ -919,49 +924,33 @@ function showToastReceta(msg, ok = true) {
     bootstrap.Toast.getOrCreateInstance(t, {delay: 3000}).show();
 }
 
-/* ── Favoritos ────────────────────────────────────────────────── */
-document.querySelectorAll('.btn-fav').forEach(btn => {
-    btn.addEventListener('click', function () {
-        const self = this;
-        self.disabled = true;
-        fetch('<?= BASE_URL ?>/index.php?route=favorito', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'receta_id=' + this.dataset.id + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
-        })
-        .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || 'Error'); return d; })
-        .then(data => {
-            if (typeof data.activo !== 'boolean') throw new Error('Respuesta inválida');
-            self.classList.toggle('btn-danger',         data.activo);
-            self.classList.toggle('btn-outline-danger', !data.activo);
-            const lbl = self.querySelector('span');
-            if (lbl) lbl.textContent = data.activo ? 'Guardada en favoritos' : 'Me gusta';
-            self.setAttribute('aria-pressed', data.activo ? 'true' : 'false');
-            showToastReceta(data.activo ? '❤️ Añadida a favoritos' : 'Quitada de favoritos', true);
-            self.disabled = false;
-        })
-        .catch(err => { self.disabled = false; showToastReceta(err.message || 'Error', false); });
-    });
-});
-
 /* ── Estrellas interactivas ───────────────────────────────────── */
 (function() {
-    const stars = document.querySelectorAll('.val-star');
-    if (!stars.length) return;
-    const label = document.querySelector('.val-star-label');
-    function setStars(val) {
-        stars.forEach((s, i) => { s.style.color = i < val ? '#e8a838' : '#ddd'; });
-        if (label) label.textContent = val + '/5';
-        const r = document.querySelector(`input[name="puntuacion"][value="${val}"]`);
-        if (r) r.checked = true;
-    }
-    let cur = 5;
-    stars.forEach((s, i) => {
-        s.addEventListener('mouseenter', () => setStars(i + 1));
-        s.addEventListener('mouseleave', () => setStars(cur));
-        s.addEventListener('click',      () => { cur = i + 1; setStars(cur); });
+    document.querySelectorAll('.val-star-group').forEach(group => {
+        const form = group.closest('form');
+        const stars = group.querySelectorAll('.val-star');
+        const label = group.querySelector('.val-star-label');
+        let cur = Number(form?.querySelector('input[name="puntuacion"]:checked')?.value || 5);
+
+        function setStars(val) {
+            stars.forEach((star, index) => {
+                star.style.color = index < val ? '#e8a838' : '#ddd';
+            });
+            if (label) label.textContent = val + '/5';
+            const radio = form?.querySelector(`input[name="puntuacion"][value="${val}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        stars.forEach((star, index) => {
+            star.addEventListener('mouseenter', () => setStars(index + 1));
+            star.addEventListener('mouseleave', () => setStars(cur));
+            star.addEventListener('click', () => {
+                cur = index + 1;
+                setStars(cur);
+            });
+        });
+        setStars(cur);
     });
-    setStars(cur);
 })();
 
 /* ── Valorar receta ───────────────────────────────────────────── */
@@ -1047,10 +1036,10 @@ if (formValorarChef) {
   });
 }
 
-/* ── Reportar comentario ──────────────────────────────────────── */
-const formReporteComentario = document.getElementById('formReporteComentario');
-if (formReporteComentario) {
-  formReporteComentario.addEventListener('submit', function (e) {
+/* ── Reportar receta o comentario ────────────────────────────── */
+const formReporteContenido = document.getElementById('formReporteContenido');
+if (formReporteContenido) {
+  formReporteContenido.addEventListener('submit', function (e) {
     e.preventDefault();
     const btn = this.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
@@ -1060,7 +1049,7 @@ if (formReporteComentario) {
     }).then(r => r.json()).then(d => {
         if (d.error) throw new Error(d.error);
         showToastReceta('🚩 Reporte enviado correctamente.', true);
-        bootstrap.Modal.getInstance(document.getElementById('modalReporteComentario')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('modalReporteContenido')).hide();
         this.reset();
         if (btn) { btn.disabled = false; }
     }).catch(err => {
@@ -1070,13 +1059,16 @@ if (formReporteComentario) {
   });
 }
 
-/* ── ID comentario → modal reporte ───────────────────────────── */
-const modalRepCom = document.getElementById('modalReporteComentario');
-if (modalRepCom) {
-  modalRepCom.addEventListener('show.bs.modal', function (e) {
+/* ── Identificar contenido que se reporta ─────────────────────── */
+const modalReporte = document.getElementById('modalReporteContenido');
+if (modalReporte) {
+  modalReporte.addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
-    const inp = document.getElementById('reporteComentarioId');
-    if (btn && inp) inp.value = btn.getAttribute('data-objetivo-id') || '0';
+    if (!btn) return;
+    document.getElementById('reporteTipo').value = btn.getAttribute('data-tipo') || 'receta';
+    document.getElementById('reporteObjetivoId').value = btn.getAttribute('data-objetivo-id') || '0';
+    document.getElementById('textoTituloReporte').textContent =
+      btn.getAttribute('data-tipo') === 'comentario' ? 'Reportar comentario' : 'Reportar receta';
   });
 }
 </script>

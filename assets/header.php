@@ -7,6 +7,8 @@ if (session_status() === PHP_SESSION_NONE) {
 // Título de página (puede sobreescribirse antes de incluir este archivo)
 $pageTitle = $pageTitle ?? 'RecetasApp';
 $baseUrl   = rtrim(BASE_URL, '/');
+$mainCssVersion = filemtime(__DIR__ . '/../styles/main.css');
+$chatbotCssVersion = filemtime(__DIR__ . '/../styles/chatbot.css');
 $bodyClass = 'app-layout';
 if (strpos($_SERVER['PHP_SELF'] ?? '', '/view/auth/') !== false) {
     $bodyClass = 'auth-page';
@@ -31,14 +33,13 @@ if (strpos($_SERVER['PHP_SELF'] ?? '', '/view/auth/') !== false) {
         })();
     </script>
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="<?= $baseUrl ?>/assets/vendor/nunito/nunito.css" rel="stylesheet">
     <!-- Estilos propios — v=8.0 (sidebar premium + landing + limpio) -->
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/chatbot.css?v=2.2">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/main.css?v=<?= $mainCssVersion ?>">
+    <link rel="stylesheet" href="<?= $baseUrl ?>/styles/chatbot.css?v=<?= $chatbotCssVersion ?>">
     <?php if (isset($extraCss)): ?>
         <link rel="stylesheet" href="<?= $baseUrl ?>/styles/<?= $extraCss ?>">
     <?php endif; ?>

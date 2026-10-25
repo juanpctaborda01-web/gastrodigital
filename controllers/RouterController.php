@@ -47,6 +47,7 @@ class RouterController
         $r->add('GET',  'categorias',      ['PageController', 'categorias']);
         $r->add('GET',  'paises',          ['PageController', 'paises']);
         $r->add('GET',  'favoritos',       ['PageController', 'favoritos']);
+        $r->add('GET',  'cocinar',         ['PageController', 'cocinarReceta']);
         $r->add('POST', 'favorito',        ['PageController', 'favorito']);
         $r->add('GET',  'mis-comentarios', ['PageController', 'misComentarios']);
         $r->add('GET',  'mis-valoraciones',['PageController', 'misComentarios']); // alias → misma vista, tab=valoraciones

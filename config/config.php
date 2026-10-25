@@ -28,8 +28,10 @@ function obtenerBaseUrl(): string {
 
 define('APP_NAME', 'GastroDigital');
 define('BASE_URL', obtenerBaseUrl());
-define('UPLOAD_PATH', ROOT_PATH . '/uploads/');
-define('UPLOAD_URL',  BASE_URL  . '/uploads/');
+define('UPLOAD_PATH',       ROOT_PATH . '/uploads/');
+define('UPLOAD_URL',        BASE_URL  . '/uploads/');
+define('UPLOAD_PASOS_PATH', ROOT_PATH . '/uploads/pasos/');
+define('UPLOAD_PASOS_URL',  BASE_URL  . '/uploads/pasos/');
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
 define('ROL_ADMIN',   'admin');

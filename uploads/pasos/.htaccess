@@ -1,0 +1,4 @@
+Options -Indexes
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/webp .webp

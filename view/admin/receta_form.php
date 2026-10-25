@@ -54,6 +54,17 @@ include __DIR__ . '/../../assets/topbar.php';
 <main class="pb-5">
 <div class="container-fluid px-3 mt-3" style="max-width:960px">
 
+<?php
+$phTag     = 'Catálogo';
+$phTagImg  = $baseUrl . '/img/Icon/Categorias/plato-principal.png';
+$phTitle   = $modoEditar ? 'Editar receta' : 'Nueva receta';
+$phSub     = $modoEditar
+    ? 'Actualiza los datos y la preparación de esta receta'
+    : 'Añade una nueva receta al catálogo de GastroDigital';
+$phArtImg  = $baseUrl . '/img/Icon/ICON-Sobrantes/book_recipe.gif';
+include __DIR__ . '/../../assets/page_header.php';
+?>
+
 <?php if ($error): ?>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i><?= $error ?>
@@ -351,7 +362,7 @@ include __DIR__ . '/../../assets/topbar.php';
     </div><!-- /card ingredientes -->
 
     <!-- ══════════════════════════════════════════════════════
-         BLOQUE 3 — Pasos dinámicos
+         BLOQUE 3 — Pasos dinámicos (con imagen y duración)
     ══════════════════════════════════════════════════════ -->
     <div class="card panel-card mb-4">
         <div class="card-header py-3 d-flex align-items-center justify-content-between"
@@ -370,30 +381,97 @@ include __DIR__ . '/../../assets/topbar.php';
         <div class="card-body p-3">
             <div id="listaPasos" class="d-flex flex-column gap-3">
                 <?php
-                $pasRows = !empty($pasList) ? $pasList : [['descripcion'=>'']];
+                $pasRows = !empty($pasList) ? $pasList : [['descripcion' => '', 'imagen' => '', 'duracion' => '']];
                 foreach ($pasRows as $idx => $paso):
-                    $num = $idx + 1;
+                    $num      = $idx + 1;
+                    $pasDesc  = is_array($paso) ? ($paso['descripcion'] ?? '') : $paso;
+                    $pasDur   = is_array($paso) ? ($paso['duracion']    ?? '') : '';
+                    $pasImg   = is_array($paso) ? ($paso['imagen']      ?? '') : '';
+                    $pasImgOk = $pasImg && file_exists(ROOT_PATH . '/uploads/pasos/' . $pasImg);
                 ?>
-                <div class="paso-fila d-flex gap-3 align-items-start" data-idx="<?= $idx ?>">
-                    <!-- Número de paso -->
-                    <div class="paso-num d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:36px;height:36px;border-radius:50%;
-                                background:linear-gradient(135deg,var(--primary),var(--secondary));
-                                color:#fff;font-weight:800;font-size:.9rem;margin-top:2px">
-                        <?= $num ?>
+                <div class="paso-fila" data-idx="<?= $idx ?>">
+                    <div class="d-flex gap-3 align-items-start">
+                        <!-- Número circular -->
+                        <div class="paso-num d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:36px;height:36px;border-radius:50%;
+                                    background:linear-gradient(135deg,var(--primary),var(--secondary));
+                                    color:#fff;font-weight:800;font-size:.9rem;margin-top:2px">
+                            <?= $num ?>
+                        </div>
+
+                        <!-- Cuerpo del paso -->
+                        <div class="flex-grow-1 d-flex flex-column gap-2">
+                            <!-- Descripción -->
+                            <textarea name="paso_desc[]"
+                                      class="form-control paso-desc"
+                                      rows="2"
+                                      placeholder="Describe este paso de preparación…"><?= htmlspecialchars($pasDesc) ?></textarea>
+
+                            <!-- Fila: duración + imagen -->
+                            <div class="row g-2 align-items-end">
+                                <!-- Duración en minutos -->
+                                <div class="col-sm-3">
+                                    <label class="form-label form-label-sm mb-1 fw-600">
+                                        <i class="bi bi-alarm me-1" style="color:var(--primary)"></i>
+                                        Duración (min)
+                                    </label>
+                                    <input type="number"
+                                           name="paso_duracion[]"
+                                           class="form-control form-control-sm"
+                                           min="1" max="9999"
+                                           placeholder="Ej: 5"
+                                           value="<?= htmlspecialchars((string)$pasDur) ?>">
+                                </div>
+
+                                <!-- Subir imagen del paso -->
+                                <div class="col-sm-9">
+                                    <label class="form-label form-label-sm mb-1 fw-600">
+                                        <i class="bi bi-image me-1" style="color:var(--secondary)"></i>
+                                        Imagen del paso
+                                        <span class="text-muted fw-400">(opcional · JPG/PNG/WebP · máx. 3 MB)</span>
+                                    </label>
+                                    <input type="file"
+                                           name="paso_imagen[]"
+                                           class="form-control form-control-sm paso-img-input"
+                                           accept=".jpg,.jpeg,.png,.webp"
+                                           data-idx="<?= $idx ?>">
+                                    <?php if ($pasImgOk): ?>
+                                    <div class="mt-1 d-flex align-items-center gap-2">
+                                        <img src="<?= $baseUrl ?>/uploads/pasos/<?= htmlspecialchars($pasImg) ?>"
+                                             alt="Imagen actual del paso <?= $num ?>"
+                                             class="rounded paso-img-actual"
+                                             style="height:56px;width:auto;object-fit:cover"
+                                             onerror="this.parentNode.style.display='none'">
+                                        <span class="text-muted small">
+                                            <code><?= htmlspecialchars($pasImg) ?></code>
+                                        </span>
+                                        <!-- Hidden para conservar imagen si no se sube una nueva -->
+                                        <input type="hidden" name="paso_imagen_actual[]"
+                                               value="<?= htmlspecialchars($pasImg) ?>">
+                                    </div>
+                                    <?php else: ?>
+                                    <input type="hidden" name="paso_imagen_actual[]" value="">
+                                    <?php endif; ?>
+                                    <!-- Preview en tiempo real -->
+                                    <div class="paso-img-preview-wrap mt-1" style="display:none">
+                                        <img src="" alt="Vista previa paso <?= $num ?>"
+                                             class="rounded paso-img-preview"
+                                             style="height:56px;width:auto;object-fit:cover">
+                                        <span class="text-muted small ms-2">Vista previa</span>
+                                    </div>
+                                </div>
+                            </div><!-- /row -->
+                        </div><!-- /cuerpo -->
+
+                        <!-- Botón eliminar paso -->
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-eliminar-paso flex-shrink-0"
+                                title="Eliminar paso"
+                                style="margin-top:2px"
+                                aria-label="Eliminar paso <?= $num ?>">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
                     </div>
-                    <div class="flex-grow-1">
-                        <textarea name="paso_desc[]"
-                                  class="form-control paso-desc"
-                                  rows="2"
-                                  placeholder="Describe este paso de preparación…"><?= htmlspecialchars(is_array($paso) ? ($paso['descripcion'] ?? '') : $paso) ?></textarea>
-                    </div>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger btn-eliminar-paso flex-shrink-0"
-                            title="Eliminar paso"
-                            style="margin-top:2px">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -436,6 +514,9 @@ include __DIR__ . '/../../assets/topbar.php';
             const num = fila.querySelector('.paso-num');
             if (num) num.textContent = i + 1;
             fila.dataset.idx = i;
+            // Actualizar data-idx en el input de imagen del paso
+            const imgInput = fila.querySelector('.paso-img-input');
+            if (imgInput) imgInput.dataset.idx = i;
         });
     }
 
@@ -488,24 +569,57 @@ include __DIR__ . '/../../assets/topbar.php';
 
     // ── PASOS ───────────────────────────────────────────────
     function crearFilaPaso(desc = '') {
-        const num = document.querySelectorAll('.paso-fila').length + 1;
+        const idx = document.querySelectorAll('.paso-fila').length;
+        const num = idx + 1;
         const div = document.createElement('div');
-        div.className = 'paso-fila d-flex gap-3 align-items-start';
+        div.className = 'paso-fila';
+        div.dataset.idx = idx;
         div.innerHTML = `
-            <div class="paso-num d-flex align-items-center justify-content-center flex-shrink-0"
-                 style="width:36px;height:36px;border-radius:50%;
-                        background:linear-gradient(135deg,var(--primary),var(--secondary));
-                        color:#fff;font-weight:800;font-size:.9rem;margin-top:2px">
-                ${num}
-            </div>
-            <div class="flex-grow-1">
-                <textarea name="paso_desc[]" class="form-control paso-desc" rows="2"
-                          placeholder="Describe este paso…">${esc(desc)}</textarea>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-paso flex-shrink-0"
-                    title="Eliminar paso" style="margin-top:2px">
-                <i class="bi bi-x-lg"></i>
-            </button>`;
+            <div class="d-flex gap-3 align-items-start">
+                <div class="paso-num d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:36px;height:36px;border-radius:50%;
+                            background:linear-gradient(135deg,var(--primary),var(--secondary));
+                            color:#fff;font-weight:800;font-size:.9rem;margin-top:2px">
+                    ${num}
+                </div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <textarea name="paso_desc[]" class="form-control paso-desc" rows="2"
+                              placeholder="Describe este paso de preparación…">${esc(desc)}</textarea>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-sm-3">
+                            <label class="form-label form-label-sm mb-1 fw-600">
+                                <i class="bi bi-alarm me-1" style="color:var(--primary)"></i>
+                                Duración (min)
+                            </label>
+                            <input type="number" name="paso_duracion[]"
+                                   class="form-control form-control-sm"
+                                   min="1" max="9999" placeholder="Ej: 5">
+                        </div>
+                        <div class="col-sm-9">
+                            <label class="form-label form-label-sm mb-1 fw-600">
+                                <i class="bi bi-image me-1" style="color:var(--secondary)"></i>
+                                Imagen del paso
+                                <span class="text-muted fw-400">(opcional · JPG/PNG/WebP · máx. 3 MB)</span>
+                            </label>
+                            <input type="file" name="paso_imagen[]"
+                                   class="form-control form-control-sm paso-img-input"
+                                   accept=".jpg,.jpeg,.png,.webp" data-idx="${idx}">
+                            <input type="hidden" name="paso_imagen_actual[]" value="">
+                            <div class="paso-img-preview-wrap mt-1" style="display:none">
+                                <img src="" alt="Vista previa"
+                                     class="rounded paso-img-preview"
+                                     style="height:56px;width:auto;object-fit:cover">
+                                <span class="text-muted small ms-2">Vista previa</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-paso flex-shrink-0"
+                        title="Eliminar paso" style="margin-top:2px"
+                        aria-label="Eliminar paso ${num}">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>`;
         return div;
     }
 
@@ -531,7 +645,27 @@ include __DIR__ . '/../../assets/topbar.php';
         actualizarContadores();
     });
 
-    // ── Previsualización de imagen ──────────────────────────
+    // ── Preview de imagen de PASO (delegación en listaPasos) ──
+    document.getElementById('listaPasos').addEventListener('change', function (e) {
+        const input = e.target.closest('.paso-img-input');
+        if (!input) return;
+        const fila  = input.closest('.paso-fila');
+        const wrap  = fila.querySelector('.paso-img-preview-wrap');
+        const prev  = fila.querySelector('.paso-img-preview');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                prev.src = ev.target.result;
+                wrap.style.display = '';
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            wrap.style.display = 'none';
+            prev.src = '';
+        }
+    });
+
+    // ── Previsualización de imagen de RECETA ────────────────
     document.getElementById('imagen').addEventListener('change', function () {
         const wrap = document.getElementById('imgPreviewWrap');
         const prev = document.getElementById('imgPreview');

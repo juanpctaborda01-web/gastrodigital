@@ -29,10 +29,10 @@ include __DIR__ . '/../../assets/topbar.php';
 
     <?php
     $phTag     = 'Catálogo';
-    $phTagIcon = 'grid-3x3-gap-fill';
+    $phTagImg  = BASE_URL . '/img/Icon/Categorias/arroz.png';
     $phTitle   = 'Categorías';
     $phSub     = count($categorias) . ' categorías registradas';
-    $phArt     = 'grid-3x3-gap-fill';
+    $phArtImg  = BASE_URL . '/img/Icon/Categorias/plato-principal.png';
     include __DIR__ . '/../../assets/page_header.php';
     ?>
 

@@ -1,0 +1,100 @@
+.report-chart-rows,
+.report-performance-rows {
+    display: grid;
+    gap: .9rem;
+    max-height: 290px;
+    overflow-y: auto;
+    padding-right: .25rem;
+}
+
+.report-chart-select,
+.report-chart-row {
+    display: grid;
+    width: 100%;
+    gap: .4rem;
+}
+
+.report-chart-select {
+    padding: .4rem;
+    border: 1px solid transparent;
+    border-radius: .5rem;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+}
+
+.report-chart-select:hover,
+.report-chart-select[aria-pressed="true"] {
+    border-color: rgba(169, 64, 36, .2);
+    background: rgba(169, 64, 36, .06);
+}
+
+.report-chart-select:focus-visible {
+    outline: 3px solid rgba(169, 64, 36, .35);
+    outline-offset: 2px;
+}
+
+.report-chart-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+    font-size: .875rem;
+}
+
+.report-chart-heading > span {
+    min-width: 0;
+}
+
+.report-chart-heading strong {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.report-chart-track {
+    display: block;
+    height: .55rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf0f2;
+}
+
+.report-chart-track > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary);
+}
+
+.report-performance-rows {
+    gap: .8rem;
+}
+
+.report-performance-row {
+    display: grid;
+    gap: .3rem;
+    padding-bottom: .55rem;
+    border-bottom: 1px solid rgba(80, 60, 40, .1);
+}
+
+.report-performance-metric {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: .5rem;
+    font-size: .75rem;
+}
+
+.report-chart-track--visits > span {
+    background: #e56a26;
+}
+
+.report-chart-track--favorites > span {
+    background: #f4ab2e;
+}
+
+[data-theme="dark"] .report-chart-track,
+.dark .report-chart-track {
+    background: #392b1e;
+}
